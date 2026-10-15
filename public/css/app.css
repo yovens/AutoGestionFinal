@@ -953,3 +953,21 @@ dialog.modal[open] { animation: modal-in .18s ease-out; }
   body:has(.receipt) .receipt, body:has(.receipt) .receipt * { visibility: visible; }
   .receipt { position: absolute; left: 0; top: 0; max-width: none; width: 74mm; border: 0; box-shadow: none; -webkit-mask: none; mask: none; padding: 0; }
 }
+
+/* Sidebar admin: lis lyen yo woule si ekran an pa wo ase (logo ak pwofil la rete fiks). */
+.rail { overflow: hidden; }
+.rail__brand, .rail__foot { flex-shrink: 0; }
+.rail__nav {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  margin-right: -8px; padding-right: 6px;
+  scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent;
+}
+.rail__nav::-webkit-scrollbar { width: 6px; }
+.rail__nav::-webkit-scrollbar-track { background: transparent; }
+.rail__nav::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .22); border-radius: 3px; }
+.rail__nav::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .38); }
+/* Ekran trè ba: tout sidebar la woule ansanm */
+@media (max-height: 520px) {
+  .rail { overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent; }
+  .rail__nav { flex: none; overflow: visible; }
+}
