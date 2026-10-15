@@ -39,6 +39,12 @@ class User extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
+    /** Nimewo pou SMS (Notifications). */
+    public function routeNotificationForSms(): ?string
+    {
+        return $this->telephone;
+    }
+
     public function loans()
     {
         return $this->hasMany(LoanCart::class, 'user_id');

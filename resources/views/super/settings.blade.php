@@ -58,6 +58,33 @@
         </section>
 
         <section class="panel">
+            <div class="panel__head"><h2 class="h3">Notifications aux clients</h2></div>
+            <div class="panel__body stack">
+                <p class="small muted">Envoyées automatiquement : code de retrait à la confirmation, rappel la veille du retour, avis le premier jour de retard.</p>
+                <input type="hidden" name="notify_mail" value="0">
+                <label class="confirm-box"><input type="checkbox" name="notify_mail" value="1" @checked(old('notify_mail', $s['notify_mail']))>
+                    <span><strong>Par e-mail</strong><br><span class="small muted">Utilise la configuration MAIL du fichier .env ({{ config('mail.default') === 'log' ? 'actuellement en mode test « log »' : config('mail.mailers.' . config('mail.default') . '.host', config('mail.default')) }}).</span></span>
+                </label>
+                <input type="hidden" name="notify_sms" value="0">
+                <label class="confirm-box"><input type="checkbox" name="notify_sms" value="1" @checked(old('notify_sms', $s['notify_sms']))>
+                    <span><strong>Par SMS</strong><br><span class="small muted">{{ config('services.sms.driver') === 'twilio' ? 'Envoi réel via Twilio.' : 'Mode test : les SMS sont écrits dans storage/logs. Pour un envoi réel, réglez SMS_DRIVER=twilio dans .env.' }}</span></span>
+                </label>
+            </div>
+            <div class="panel__foot row row--between">
+                <span class="small muted">Le test est envoyé à votre propre compte.</span>
+                <button type="submit" form="test-notification" class="btn btn--sm"><x-icon name="send" size="sm" /> Envoyer un test</button>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel__head"><h2 class="h3">Sauvegardes</h2><a href="{{ route('super.backups') }}" class="small">Voir les sauvegardes</a></div>
+            <div class="panel__body form-grid">
+                <x-field name="backup_keep_days" type="number" label="Conserver (jours)" :value="$s['backup_keep_days']" min="1" max="365" required hint="Une sauvegarde est faite chaque nuit à 2 h." />
+                <x-field name="backup_email" type="email" label="Envoyer une copie à" :value="$s['backup_email']" placeholder="proprietaire@exemple.ht" hint="Facultatif. Copie hors du serveur, par e-mail." />
+            </div>
+        </section>
+
+        <section class="panel">
             <div class="panel__head"><h2 class="h3">Tickets</h2></div>
             <div class="panel__body stack">
                 <x-field name="ticket_footer" type="textarea" label="Mention en bas des tickets" :value="$s['ticket_footer']" rows="2" maxlength="200"
@@ -67,4 +94,6 @@
         </section>
     </div>
 </form>
+
+<form method="POST" action="{{ route('super.settings.test') }}" id="test-notification" hidden>@csrf</form>
 @endsection

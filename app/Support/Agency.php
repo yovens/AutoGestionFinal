@@ -25,6 +25,10 @@ class Agency
         'default_deposit'  => 0,     // kosyon pa defo nan remiz kle
         'methods'          => ['cash', 'moncash', 'natcash', 'card', 'transfer'],
         'ticket_footer'    => '',    // tèks siplemantè anba tikè yo
+        'notify_mail'      => true,  // voye e-mail bay kliyan yo (kòd retrè, rapèl, reta)
+        'notify_sms'       => false, // voye SMS (bezwen SMS_DRIVER=twilio nan .env)
+        'backup_keep_days' => 14,    // konbyen jou nou kenbe backup yo
+        'backup_email'     => '',    // si li ranpli: kopi backup la voye pa e-mail
     ];
 
     private const CACHE_KEY = 'agency.settings';

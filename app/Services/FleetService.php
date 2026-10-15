@@ -8,7 +8,9 @@ use App\Models\Ticket;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Notifications\LoanConfirmed;
 use App\Support\Audit;
+use App\Support\Notifier;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -82,7 +84,7 @@ class FleetService
     /** Ajans lan konfime demann lan: kliyan an resevwa yon kòd retrè. */
     public function approveLoan(LoanCart $loan): LoanCart
     {
-        return DB::transaction(function () use ($loan) {
+        $loan = DB::transaction(function () use ($loan) {
             $loan = LoanCart::lockForUpdate()->findOrFail($loan->id);
 
             if ($loan->status !== LoanCart::PENDING) {
@@ -94,6 +96,11 @@ class FleetService
 
             return $loan;
         });
+
+        // Kliyan an resevwa kòd retrè li (e-mail / SMS selon Paramètres). Yon erè pa bloke konfimasyon an.
+        Notifier::send($loan->user, new LoanConfirmed($loan->loadMissing('vehicle')));
+
+        return $loan;
     }
 
     public function rejectLoan(LoanCart $loan): void
@@ -326,6 +333,8 @@ class FleetService
                 'total_amount'           => $loan->total_amount + $extra,
                 'end_date'               => $base->addDays($days),
                 'renewal_requested_days' => null,
+                'reminder_sent_at'       => null, // nouvo dat: nouvo rapèl
+                'late_notice_sent_at'    => null,
             ]);
 
             $note = "Prolongation {$days} jour(s)";

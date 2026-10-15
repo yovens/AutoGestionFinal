@@ -52,7 +52,7 @@ class LoanCart extends Model
         'start_date', 'end_date', 'renewal_requested_days', 'returned_at',
         'pickup_code', 'picked_up_at', 'checkout_by', 'checkin_by', 'id_document',
         'km_out', 'km_in', 'fuel_out', 'fuel_in', 'condition_out', 'condition_in',
-        'deposit', 'deposit_returned',
+        'deposit', 'deposit_returned', 'reminder_sent_at', 'late_notice_sent_at',
     ];
 
     protected $casts = [
@@ -60,6 +60,8 @@ class LoanCart extends Model
         'end_date'               => 'date',
         'returned_at'            => 'datetime',
         'picked_up_at'           => 'datetime',
+        'reminder_sent_at'       => 'datetime',
+        'late_notice_sent_at'    => 'datetime',
         'km_out'                 => 'integer',
         'km_in'                  => 'integer',
         'fuel_out'               => 'integer',

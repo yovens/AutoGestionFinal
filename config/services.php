@@ -44,4 +44,19 @@ return [
         'verify' => false, 
     ],
 ],
+
+    /*
+     | SMS: driver 'log' (ekri nan storage/logs, pou teste) oswa 'twilio'.
+     | Twilio: https://www.twilio.com → Account SID, Auth Token, nimewo oswa non ekspeditè.
+     */
+    'sms' => [
+        'driver'  => env('SMS_DRIVER', 'log'),
+        'country' => env('SMS_COUNTRY_CODE', '509'),
+        'twilio'  => [
+            'sid'   => env('TWILIO_SID'),
+            'token' => env('TWILIO_TOKEN'),
+            'from'  => env('TWILIO_FROM'),
+        ],
+    ],
+
 ];

@@ -26,6 +26,7 @@ use App\Http\Controllers\Counter\TicketController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Controllers\Super\ActivityController;
+use App\Http\Controllers\Super\BackupController;
 use App\Http\Controllers\Super\ReportController;
 use App\Http\Controllers\Super\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +87,11 @@ Route::prefix('direction')->name('super.')->middleware(['auth', 'active', 'super
     Route::get('/journal', [ActivityController::class, 'index'])->name('activity');
     Route::get('/parametres', [SettingsController::class, 'edit'])->name('settings');
     Route::put('/parametres', [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/parametres/test-notification', [SettingsController::class, 'testNotification'])->name('settings.test');
+    Route::get('/sauvegardes', [BackupController::class, 'index'])->name('backups');
+    Route::post('/sauvegardes', [BackupController::class, 'store'])->name('backups.store');
+    Route::get('/sauvegardes/{file}', [BackupController::class, 'download'])->name('backups.download');
+    Route::delete('/sauvegardes/{file}', [BackupController::class, 'destroy'])->name('backups.destroy');
 });
 
 /*

@@ -86,3 +86,32 @@ Les opérations de stock sont faites en transaction avec verrou (`lockForUpdate`
 
 - **Paramètres de l’agence** (super admin) : coordonnées affichées sur le site et les tickets, % de frais de retard, caution proposée, modes de paiement acceptés, mention en bas des tickets.
 - **Journal d’activité** : chaque action importante (confirmation, remise, retour, encaissement, prolongation, prix modifié, rôle changé, suppression, connexion du personnel) est enregistrée avec l’auteur, l’heure et l’IP.
+
+## Notifications clients
+
+| Quand | Message | Canal |
+|---|---|---|
+| L’agence confirme une location | Code de retrait, adresse, horaires | e-mail + SMS |
+| La veille du retour (8 h) | Rappel de retour, lien pour prolonger | e-mail + SMS |
+| Premier jour de retard (8 h) | Avis de retard, frais appliqués | e-mail + SMS |
+
+- Activer / désactiver : Direction → Paramètres → Notifications (bouton « Envoyer un test »).
+- E-mail : configuration `MAIL_*` du `.env` (ex. Gmail avec un mot de passe d’application).
+- SMS : `SMS_DRIVER=log` écrit les SMS dans `storage/logs/laravel.log` (test). Pour un envoi réel : `SMS_DRIVER=twilio`, `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`.
+- Les clients créés au comptoir sans e-mail reçoivent seulement les SMS. Un échec d’envoi ne bloque jamais l’opération (détail dans le log).
+- Commande manuelle : `php artisan loans:remind`.
+
+## Sauvegardes
+
+- Chaque nuit à 2 h : `php artisan app:backup` → `storage/app/backups/autogestion-AAAA-MM-JJ-HHMMSS.sql.gz` (MySQL ou SQLite, sans `mysqldump`).
+- Conservation et copie par e-mail : Direction → Paramètres → Sauvegardes. Liste, téléchargement et sauvegarde immédiate : Direction → Sauvegardes.
+- Restaurer : `php artisan app:restore nom-du-fichier.sql.gz` (une sauvegarde de sécurité de l’état actuel est faite avant).
+
+## Tâches planifiées
+
+Tout (retards, rappels, sauvegardes) passe par le planificateur Laravel, à lancer **chaque minute** :
+
+- Linux : `* * * * * cd /chemin/vers/autogestion && php artisan schedule:run >> /dev/null 2>&1`
+- Windows (PowerShell administrateur) :
+  `schtasks /create /sc minute /mo 1 /tn "AutoGestion" /tr "cmd /c cd /d C:\chemin\autoGestionFinal && php artisan schedule:run"`
+- En développement : `php artisan schedule:work`

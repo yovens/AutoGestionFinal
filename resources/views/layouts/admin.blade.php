@@ -24,6 +24,7 @@
             ...($me->isSuperAdmin() ? [[
                 ['route' => 'super.reports',            'match' => 'super.reports*',       'icon' => 'dashboard', 'label' => 'Rapports'],
                 ['route' => 'super.activity',           'match' => 'super.activity',       'icon' => 'clock',     'label' => 'Journal d’activité'],
+                ['route' => 'super.backups',            'match' => 'super.backups*',       'icon' => 'upload',    'label' => 'Sauvegardes'],
                 ['route' => 'super.settings',           'match' => 'super.settings*',      'icon' => 'shield',    'label' => 'Paramètres'],
             ]] : []),
         ]

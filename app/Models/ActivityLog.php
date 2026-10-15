@@ -16,6 +16,7 @@ class ActivityLog extends Model
         'vehicle'  => 'Parc',
         'user'     => 'Comptes',
         'settings' => 'Paramètres',
+        'backup'   => 'Sauvegardes',
         'auth'     => 'Connexions',
     ];
 
