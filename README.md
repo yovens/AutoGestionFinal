@@ -36,9 +36,12 @@ En local : `php artisan loans:sync-expired` (le statut est aussi recalculé à l
 |---|---|
 | Client | Catalogue, réservations, code de retrait, reçus et bons |
 | Secrétaire (`SECRETAIRE`) | Comptoir : confirmer les demandes, remise des clés, retours, ventes, clients sur place, tickets, sa caisse du jour |
-| Administrateur (`ADMIN`) | Tout le comptoir + parc, comptes, paiements, messages, caisse de tous les agents |
+| Administrateur (`ADMIN`) | Tout le comptoir + parc, comptes clients et secrétaires, paiements, messages, caisse de tous les agents |
+| Super administrateur (`SUPER_ADMIN`) | Tout ce que fait l’admin + comptes administrateurs, paramètres de l’agence, journal d’activité, rapports et export CSV, suppression de paiements et de locations |
 
-Créer une secrétaire : Comptes → Créer un compte → rôle « Secrétaire ». Compte de démo (DemoSeeder) : `secretaire@autogestion.ht` / `password`.
+Le premier super administrateur : à la migration, l’administrateur le plus ancien devient super administrateur. Pour promouvoir un autre compte : `php artisan app:super-admin email@exemple.ht`. Il reste toujours au moins un super administrateur actif (impossible de le suspendre, supprimer ou rétrograder).
+
+Créer une secrétaire : Comptes → Créer un compte → rôle « Secrétaire ». Comptes de démo (DemoSeeder) : super admin `admin@gmail.com` / `123456`, admin `gerant@autogestion.ht` / `password`, secrétaire `secretaire@autogestion.ht` / `password`.
 
 ## Le comptoir, pas à pas
 
@@ -79,6 +82,7 @@ Les opérations de stock sont faites en transaction avec verrou (`lockForUpdate`
 - Thème clair, sombre ou selon l’appareil (menu du compte).
 - Messages de validation en français : `lang/fr`.
 
-## Prochaines étapes
+## Paramètres et journal
 
-- Rôle super administrateur.
+- **Paramètres de l’agence** (super admin) : coordonnées affichées sur le site et les tickets, % de frais de retard, caution proposée, modes de paiement acceptés, mention en bas des tickets.
+- **Journal d’activité** : chaque action importante (confirmation, remise, retour, encaissement, prolongation, prix modifié, rôle changé, suppression, connexion du personnel) est enregistrée avec l’auteur, l’heure et l’IP.

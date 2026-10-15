@@ -6,7 +6,7 @@
 <div class="page-head">
     <div class="page-head__text">
         <h1 class="h1">Comptes</h1>
-        <p class="muted">Clients et membres de l’équipe. Un compte suspendu ne peut plus se connecter.</p>
+        <p class="muted">Clients et membres de l’équipe. Un compte suspendu ne peut plus se connecter.{{ auth()->user()->isSuperAdmin() ? '' : ' Les comptes administrateurs sont gérés par le super administrateur.' }}</p>
     </div>
     <div class="page-head__actions">
         <button type="button" class="btn btn--primary" data-dialog-open="new"><x-icon name="plus" size="sm" /> Créer un compte</button>
@@ -17,8 +17,7 @@
     <nav class="tabs" aria-label="Filtrer par rôle">
         <a href="{{ route('admin.users.index', array_filter(['q' => $search])) }}" @if (!$role) aria-current="page" @endif>Tous</a>
         <a href="{{ route('admin.users.index', array_filter(['role' => 'CLIENT', 'q' => $search])) }}" @if ($role === 'CLIENT') aria-current="page" @endif>Clients</a>
-        <a href="{{ route('admin.users.index', array_filter(['role' => 'SECRETAIRE', 'q' => $search])) }}" @if ($role === 'SECRETAIRE') aria-current="page" @endif>Secrétaires</a>
-        <a href="{{ route('admin.users.index', array_filter(['role' => 'ADMIN', 'q' => $search])) }}" @if ($role === 'ADMIN') aria-current="page" @endif>Administrateurs</a>
+        <a href="{{ route('admin.users.index', array_filter(['role' => 'staff', 'q' => $search])) }}" @if ($role === 'staff') aria-current="page" @endif>Personnel</a>
     </nav>
     @if ($role)<input type="hidden" name="role" value="{{ $role }}">@endif
     <div class="input-icon toolbar__search">
@@ -54,13 +53,13 @@
                             </td>
                             <td>
                                 <div class="actions">
-                                    @unless ($u->is(auth()->user()))
+                                    @if (auth()->user()->canManage($u))
                                         <form method="POST" action="{{ route('admin.users.block', $u) }}" class="inline-form"
                                               data-confirm="{{ $u->isBlocked() ? 'Réactiver' : 'Suspendre' }} le compte de {{ $u->nom }} ?">
                                             @csrf
                                             <button type="submit" class="btn btn--sm btn--ghost">{{ $u->isBlocked() ? 'Réactiver' : 'Suspendre' }}</button>
                                         </form>
-                                    @endunless
+                                    @endif
                                     <a href="{{ route('admin.users.show', $u) }}" class="btn btn--sm btn--ghost btn--icon" aria-label="Voir le compte"><x-icon name="chevron-right" size="sm" /></a>
                                 </div>
                             </td>
@@ -83,7 +82,7 @@
             </div>
             <div class="form-grid">
                 <x-field name="password" type="password" label="Mot de passe provisoire" autocomplete="new-password" hint="8 caractères minimum" required />
-                <x-field name="role" type="select" label="Rôle" :value="'CLIENT'" :options="\App\Models\User::ROLE_LABELS" />
+                <x-field name="role" type="select" label="Rôle" :value="'CLIENT'" :options="auth()->user()->assignableRoles()" />
             </div>
         </div>
         <div class="modal__foot">

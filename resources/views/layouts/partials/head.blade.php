@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{{ trim($__env->yieldContent('title')) ? trim($__env->yieldContent('title')) . ' | ' : '' }}AutoGestion</title>
-<meta name="description" content="@yield('description', 'Location et vente de véhicules à Simon, Les Cayes.')">
+<meta name="description" content="@yield('description', 'Location et vente de véhicules à ' . $agency['city'] . '.')">
 <meta name="theme-color" content="#14213D">
 <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
 <script>

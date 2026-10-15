@@ -15,7 +15,7 @@ class AdminUserSeeder extends Seeder
             [
                 'nom'       => 'Admin',
                 'password'  => Hash::make('123456'),
-                'role'      => User::ADMIN,
+                'role'      => User::SUPER_ADMIN,
                 'status'    => User::ACTIVE,
                 'telephone' => '00000000',
             ]

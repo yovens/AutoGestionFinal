@@ -18,7 +18,7 @@ class SaleController extends Controller
     public function confirm(Request $request, Transaction $transaction)
     {
         $data = $request->validate([
-            'method' => ['required', Rule::in(array_keys(Transaction::METHODS))],
+            'method' => ['required', Rule::in(array_keys(\App\Support\Agency::methods()))],
         ], [], ['method' => 'mode de paiement']);
 
         $ticket = $this->fleet->confirmSale($transaction, $request->user(), $data['method']);

@@ -60,7 +60,7 @@
                     <dt>Ticket</dt><dd><a href="{{ route('counter.tickets.show', $tk) }}">{{ $tk->code }}</a></dd>
                 @endforeach
             </dl>
-            <p class="tiny muted" style="margin-top:var(--s5)">AutoGestion, Simon, Les Cayes. +509 40 16 03 35.</p>
+            <p class="tiny muted" style="margin-top:var(--s5)">{{ $agency['name'] }}, {{ $agency['city'] }}. {{ $agency['phone'] }}.</p>
         </div>
     </article>
 
@@ -75,15 +75,17 @@
             </section>
             @include('counter.partials.sale-dialog', ['t' => $transaction])
         @endif
+        @if (auth()->user()->isSuperAdmin())
         <section class="panel">
             <div class="panel__body">
                 <form method="POST" action="{{ route('admin.transactions.destroy', $transaction) }}" data-confirm="Supprimer définitivement ce paiement ?">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn btn--danger btn--block"><x-icon name="trash" size="sm" /> Supprimer</button>
                 </form>
-                <p class="tiny muted" style="margin-top:var(--s2)">Réservé aux erreurs de saisie : le montant disparaît des totaux.</p>
+                <p class="tiny muted" style="margin-top:var(--s2)">Réservé aux erreurs de saisie : le montant disparaît des totaux. L’opération reste inscrite au journal.</p>
             </div>
         </section>
+        @endif
     </aside>
 </div>
 @endsection

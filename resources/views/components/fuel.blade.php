@@ -1,6 +1,6 @@
 @props(['name', 'value' => null, 'label' => 'Carburant', 'idPrefix' => 'fuel'])
 @php $current = old($name, $value); @endphp
-<fieldset class="field" style="border:0;padding:0;margin:0">
+<fieldset class="field" style="border:0;padding:0;margin-inline:0;margin-bottom:0">
     <legend class="field__label" style="margin-bottom:6px">{{ $label }}</legend>
     <div class="fuel">
         @foreach (\App\Models\LoanCart::FUEL as $lvl => $text)

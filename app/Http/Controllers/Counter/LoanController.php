@@ -112,7 +112,7 @@ class LoanController extends Controller
             'fuel_out'      => 'required|integer|between:0,4',
             'condition_out' => 'nullable|string|max:1000',
             'deposit'       => 'nullable|integer|min:0',
-            'method'        => ['required', Rule::in(array_keys(Transaction::METHODS))],
+            'method'        => ['required', Rule::in(array_keys(\App\Support\Agency::methods()))],
         ], [
             'id_checked.accepted' => 'Confirmez que la pièce d’identité du client a été vérifiée.',
         ], [
@@ -151,7 +151,7 @@ class LoanController extends Controller
             'extra_fee'        => 'nullable|integer|min:0',
             'extra_reason'     => 'nullable|string|max:120',
             'deposit_returned' => 'nullable|boolean',
-            'method'           => ['nullable', Rule::in(array_keys(Transaction::METHODS))],
+            'method'           => ['nullable', Rule::in(array_keys(\App\Support\Agency::methods()))],
         ], [], [
             'km_in' => 'kilométrage', 'fuel_in' => 'carburant', 'late_fee' => 'frais de retard',
             'extra_fee' => 'autres frais', 'extra_reason' => 'motif', 'method' => 'mode de paiement',
@@ -178,7 +178,7 @@ class LoanController extends Controller
     {
         $data = $request->validate([
             'additional_days' => 'required|integer|min:1|max:' . FleetService::MAX_DAYS,
-            'method'          => ['required', Rule::in(array_keys(Transaction::METHODS))],
+            'method'          => ['required', Rule::in(array_keys(\App\Support\Agency::methods()))],
         ], [], ['additional_days' => 'nombre de jours', 'method' => 'mode de paiement']);
 
         $this->fleet->extendLoan($loan, (int) $data['additional_days'], $request->user(), $data['method']);
@@ -204,7 +204,7 @@ class LoanController extends Controller
 
     public function destroy(Request $request, LoanCart $loan)
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Seul le super administrateur peut supprimer une location.');
 
         $this->fleet->deleteLoan($loan);
 

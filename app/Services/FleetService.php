@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\Audit;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -39,13 +40,16 @@ class FleetService
             $vehicle = Vehicle::lockForUpdate()->findOrFail($vehicleId);
             $vehicle->takeOne();
 
-            return LoanCart::create([
+            $loan = LoanCart::create([
                 'user_id'       => $user->id,
                 'vehicle_id'    => $vehicle->id,
                 'status'        => LoanCart::PENDING,
                 'duration_days' => $days,
                 'total_amount'  => $vehicle->loan_price * $days,
             ]);
+            Audit::log('loan.request', "Demande de location {$loan->reference} : {$vehicle->name}, {$days} j", $loan);
+
+            return $loan;
         });
     }
 
@@ -61,7 +65,7 @@ class FleetService
             $vehicle = Vehicle::lockForUpdate()->findOrFail($vehicleId);
             $vehicle->takeOne();
 
-            return LoanCart::create([
+            $loan = LoanCart::create([
                 'user_id'       => $userId,
                 'vehicle_id'    => $vehicle->id,
                 'status'        => LoanCart::READY,
@@ -69,6 +73,9 @@ class FleetService
                 'duration_days' => $days,
                 'total_amount'  => $vehicle->loan_price * $days,
             ]);
+            Audit::log('loan.create', "Location sur place {$loan->reference} : {$vehicle->name}, {$days} j", $loan);
+
+            return $loan;
         });
     }
 
@@ -83,6 +90,7 @@ class FleetService
             }
 
             $loan->update(['status' => LoanCart::READY, 'pickup_code' => LoanCart::newPickupCode()]);
+            Audit::log('loan.confirm', "Location {$loan->reference} confirmée, code {$loan->pickup_code}", $loan);
 
             return $loan;
         });
@@ -98,6 +106,7 @@ class FleetService
             }
 
             $loan->update(['status' => LoanCart::REJECTED]);
+            Audit::log('loan.reject', "Demande {$loan->reference} refusée", $loan);
             $this->releaseVehicle($loan);
         });
     }
@@ -113,6 +122,7 @@ class FleetService
             }
 
             $loan->update(['status' => LoanCart::CANCELLED]);
+            Audit::log('loan.cancel', "Location {$loan->reference} annulée (client absent)", $loan);
             $this->releaseVehicle($loan);
         });
     }
@@ -149,6 +159,8 @@ class FleetService
             ]);
 
             $payment = $this->recordPayment($loan, Transaction::RENTAL, $loan->total_amount, $agent, $data['method'], 'Location ' . $loan->duration_days . ' jour(s)');
+
+            Audit::log('loan.checkout', "Clés remises {$loan->reference} : {$loan->vehicle->plate}, " . Transaction::METHODS[$data['method']] . ' ' . \App\Providers\AppServiceProvider::money($loan->total_amount), $loan, ['montant' => $loan->total_amount, 'km' => $loan->km_out]);
 
             return Ticket::create([
                 'kind'           => Ticket::CHECKOUT,
@@ -241,6 +253,8 @@ class FleetService
 
             $this->releaseVehicle($loan);
 
+            Audit::log('loan.checkin', "Retour {$loan->reference} : {$loan->vehicle->plate}, solde encaissé " . \App\Providers\AppServiceProvider::money($due), $loan, ['solde' => $due, 'retard' => $late, 'frais' => $extra, 'km' => $loan->km_in]);
+
             return Ticket::create([
                 'kind'         => Ticket::CHECKIN,
                 'loan_cart_id' => $loan->id,
@@ -285,6 +299,7 @@ class FleetService
             'status'                 => LoanCart::PENDING_RENEWAL,
             'renewal_requested_days' => $days,
         ]);
+        Audit::log('loan.renewal', "Prolongation de {$days} j demandée pour {$loan->reference}", $loan);
     }
 
     /**
@@ -314,6 +329,7 @@ class FleetService
             ]);
 
             $note = "Prolongation {$days} jour(s)";
+            Audit::log('loan.extend', "{$loan->reference} prolongée de {$days} j (" . \App\Providers\AppServiceProvider::money($extra) . ")" . ($method ? ', encaissé' : ', à encaisser au retour'), $loan);
 
             if ($method) {
                 $this->recordPayment($loan, Transaction::RENTAL, $extra, $agent, $method, $note);
@@ -337,6 +353,7 @@ class FleetService
             'status'                 => $loan->isExpired() ? LoanCart::EXPIRED : LoanCart::APPROVED,
             'renewal_requested_days' => null,
         ]);
+        Audit::log('loan.reject', "Prolongation refusée pour {$loan->reference}", $loan);
     }
 
     public function deleteLoan(LoanCart $loan): void
@@ -348,6 +365,7 @@ class FleetService
                 $this->releaseVehicle($loan);
             }
 
+            Audit::log('loan.delete', "Location {$loan->reference} supprimée ({$loan->status_label}, " . \App\Providers\AppServiceProvider::money($loan->total_amount) . ")", null, ['loan' => $loan->only(['id', 'user_id', 'vehicle_id', 'status', 'total_amount'])]);
             $loan->delete();
         });
     }
@@ -363,13 +381,16 @@ class FleetService
             $vehicle = Vehicle::lockForUpdate()->findOrFail($vehicleId);
             $vehicle->takeOne();
 
-            return Transaction::create([
+            $sale = Transaction::create([
                 'user_id'    => $user->id,
                 'vehicle_id' => $vehicle->id,
                 'amount'     => $vehicle->price,
                 'type'       => Transaction::SALE,
                 'status'     => Transaction::PENDING,
             ]);
+            Audit::log('sale.request', "Achat réservé {$sale->reference} : {$vehicle->name}", $sale);
+
+            return $sale;
         });
     }
 
@@ -384,6 +405,7 @@ class FleetService
             }
 
             $transaction->update(['status' => Transaction::COMPLETED, 'method' => $method, 'recorded_by' => $agent?->id]);
+            Audit::log('sale.confirm', "Paiement {$transaction->reference} encaissé (" . \App\Providers\AppServiceProvider::money($transaction->amount) . ($method ? ', ' . Transaction::METHODS[$method] : '') . ')', $transaction);
 
             if ($transaction->type !== Transaction::SALE || !$agent) {
                 return null;
@@ -416,6 +438,7 @@ class FleetService
             }
 
             $transaction->update(['status' => Transaction::CANCELLED]);
+            Audit::log('sale.cancel', "Achat {$transaction->reference} annulé", $transaction);
 
             if ($vehicle = Vehicle::lockForUpdate()->find($transaction->vehicle_id)) {
                 $vehicle->releaseOne();

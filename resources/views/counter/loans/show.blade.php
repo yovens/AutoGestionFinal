@@ -186,7 +186,7 @@
             </section>
         @endif
 
-        @if ($isAdmin)
+        @if (auth()->user()->isSuperAdmin())
             <section class="panel">
                 <div class="panel__body">
                     <form method="POST" action="{{ route('counter.loans.destroy', $loan) }}" data-confirm="Supprimer définitivement cette location ?{{ in_array($loan->status, $L::HOLDING) ? ' Le véhicule sera remis en stock.' : '' }}">

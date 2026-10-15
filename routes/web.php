@@ -25,6 +25,9 @@ use App\Http\Controllers\Counter\SaleController;
 use App\Http\Controllers\Counter\TicketController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SocialiteController;
+use App\Http\Controllers\Super\ActivityController;
+use App\Http\Controllers\Super\ReportController;
+use App\Http\Controllers\Super\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -70,6 +73,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'admin'])-
 
     // Tranzaksyon
     Route::resource('transactions', TransactionController::class)->only(['index', 'show', 'store', 'destroy']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| DIRECTION (super admin sèlman)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('direction')->name('super.')->middleware(['auth', 'active', 'super'])->group(function () {
+    Route::get('/rapports', [ReportController::class, 'index'])->name('reports');
+    Route::get('/rapports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('/journal', [ActivityController::class, 'index'])->name('activity');
+    Route::get('/parametres', [SettingsController::class, 'edit'])->name('settings');
+    Route::put('/parametres', [SettingsController::class, 'update'])->name('settings.update');
 });
 
 /*

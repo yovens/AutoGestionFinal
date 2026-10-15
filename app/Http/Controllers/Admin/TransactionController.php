@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\FleetService;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -47,11 +48,12 @@ class TransactionController extends Controller
             'vehicle_id' => 'required|exists:vehicles,id',
             'amount'     => 'required|integer|min:0',
             'type'       => ['required', Rule::in(array_keys(Transaction::TYPE_LABELS))],
-            'method'     => ['required', Rule::in(array_keys(Transaction::METHODS))],
+            'method'     => ['required', Rule::in(array_keys(\App\Support\Agency::methods()))],
             'note'       => 'nullable|string|max:255',
         ], [], ['user_id' => 'client', 'vehicle_id' => 'véhicule', 'amount' => 'montant', 'method' => 'mode de paiement']);
 
-        Transaction::create($data + ['status' => Transaction::COMPLETED, 'recorded_by' => $request->user()->id]);
+        $t = Transaction::create($data + ['status' => Transaction::COMPLETED, 'recorded_by' => $request->user()->id]);
+        Audit::log('payment.create', "Paiement saisi {$t->reference} : " . \App\Providers\AppServiceProvider::money($t->amount) . " ({$t->type_label}, {$t->method_label})", $t);
 
         return redirect()->route('admin.transactions.index')->with('success', 'Paiement enregistré.');
     }
@@ -65,13 +67,17 @@ class TransactionController extends Controller
 
 
 
-    public function destroy(Transaction $transaction)
+    /** Efase yon peman: super admin sèlman (lajan pa dwe ka disparèt san kontwòl). */
+    public function destroy(Request $request, Transaction $transaction)
     {
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Seul le super administrateur peut supprimer un paiement.');
+
         // Yon acha ki t ap tann: lage machin nan anvan n efase.
         if ($transaction->type === Transaction::SALE && $transaction->status === Transaction::PENDING) {
             $this->fleet->cancelSale($transaction);
         }
 
+        Audit::log('payment.delete', "Paiement supprimé {$transaction->reference} : " . \App\Providers\AppServiceProvider::money($transaction->amount) . " ({$transaction->type_label}, {$transaction->status_label})", null, $transaction->only(['id', 'user_id', 'vehicle_id', 'amount', 'type', 'status', 'method']));
         $transaction->delete();
 
         return redirect()->route('admin.transactions.index')->with('success', 'Transaction supprimée.');

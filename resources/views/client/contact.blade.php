@@ -26,11 +26,11 @@
         <div class="panel">
             <div class="panel__body">
                 <h2 class="h3">Par téléphone</h2>
-                <p style="margin-top:6px"><a href="tel:+50940160335" class="strong">+509 40 16 03 35</a></p>
-                <p class="small muted">Lundi au vendredi, 8 h à 17 h</p>
+                <p style="margin-top:6px"><a href="{{ \App\Support\Agency::telHref() }}" class="strong">{{ $agency['phone'] }}</a></p>
+                <p class="small muted">{{ $agency['hours'] }}</p>
                 <hr class="divider" style="margin:var(--s4) 0">
                 <h2 class="h3">À l’agence</h2>
-                <p class="small" style="margin-top:6px">Simon, arrondissement des Cayes</p>
+                <p class="small" style="margin-top:6px">{{ $agency['address'] }}</p>
             </div>
         </div>
 

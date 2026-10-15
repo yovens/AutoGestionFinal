@@ -5,6 +5,7 @@ use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsClient;
 use App\Http\Middleware\IsStaff;
+use App\Http\Middleware\IsSuperAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'  => IsAdmin::class,
             'client' => IsClient::class,
             'staff'  => IsStaff::class,
+            'super'  => IsSuperAdmin::class,
             'active' => CheckUserStatus::class,
         ]);
 
@@ -28,6 +30,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->homeRoute() ?? '/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Se pa yon bug: se yon règ biznis. Pa ekri l nan laravel.log.
+        $exceptions->dontReport(FleetException::class);
+
         // Règ biznis ki pa respekte (stock vid, move estati...) → retounen sou paj la ak mesaj la.
         $exceptions->render(function (FleetException $e, Request $request) {
             if ($request->expectsJson()) {

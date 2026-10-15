@@ -10,7 +10,7 @@
         <img src="{{ asset('images/istockphoto-1412904420-612x612.jpg') }}" alt="">
         <a href="{{ route('home') }}" class="logo">@include('layouts.partials.logo')</a>
         <div>
-            <p class="auth__quote">Les clés vous attendent à Simon.</p>
+            <p class="auth__quote">Les clés vous attendent à {{ \Illuminate\Support\Str::before($agency['city'], ',') }}.</p>
             <p class="auth__note">Suivez vos locations, prolongez-les en un clic et retrouvez tous vos reçus au même endroit.</p>
         </div>
     </aside>

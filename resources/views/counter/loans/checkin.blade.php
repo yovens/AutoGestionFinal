@@ -60,7 +60,7 @@
                 <h2 class="h3">Frais</h2>
                 <div class="form-grid">
                     <x-field name="late_fee" type="number" label="Frais de retard ($)" :value="$late" min="0" data-add
-                             :hint="$loan->daysLate() ? $loan->daysLate() . ' jour(s) × ' . \App\Providers\AppServiceProvider::money($v?->loan_price ?? 0) . ', modifiable' : 'Pas de retard'" />
+                             :hint="$loan->daysLate() ? $loan->daysLate() . ' jour(s) × ' . \App\Providers\AppServiceProvider::money($v?->loan_price ?? 0) . ($agency['late_fee_percent'] != 100 ? ' × ' . $agency['late_fee_percent'] . ' %' : '') . ', modifiable' : 'Pas de retard'" />
                     <x-field name="extra_fee" type="number" label="Autres frais ($)" :value="0" min="0" data-add hint="Carburant manquant, dégâts, nettoyage..." />
                     <x-field name="extra_reason" label="Motif des autres frais" class="span-2" maxlength="120" placeholder="Ex. réservoir à 1/4 au lieu de plein" />
                 </div>

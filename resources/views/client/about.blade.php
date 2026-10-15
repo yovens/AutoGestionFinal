@@ -6,7 +6,7 @@
 <div class="container--narrow" style="margin:0;padding:0">
     <h1 class="display" style="font-size:clamp(2rem,4vw,3rem)">Une agence locale pour louer et acheter en confiance.</h1>
     <p class="lead" style="margin-top:var(--s5)">
-        AutoGestion vend et loue des véhicules de toutes catégories depuis Simon, aux Cayes.
+        {{ $agency['name'] }} vend et loue des véhicules de toutes catégories depuis {{ $agency['city'] }}.
         Notre objectif : rendre la voiture accessible, avec des prix affichés clairement et un vrai service sur place.
     </p>
 </div>
@@ -36,9 +36,9 @@
     <section class="panel"><div class="panel__body">
         <h2 class="h2">Nous trouver</h2>
         <dl class="agency__list" style="margin-top:var(--s3)">
-            <div><x-icon name="pin" /><dt>Adresse</dt><dd>#123, rue des Véhicules, Simon, Les Cayes</dd></div>
-            <div><x-icon name="phone" /><dt>Téléphone</dt><dd><a href="tel:+50940160335">+509 40 16 03 35</a></dd></div>
-            <div><x-icon name="clock" /><dt>Horaires</dt><dd>Lundi au vendredi, 8 h à 17 h</dd></div>
+            <div><x-icon name="pin" /><dt>Adresse</dt><dd>{{ $agency['address'] }}</dd></div>
+            <div><x-icon name="phone" /><dt>Téléphone</dt><dd><a href="{{ \App\Support\Agency::telHref() }}">{{ $agency['phone'] }}</a></dd></div>
+            <div><x-icon name="clock" /><dt>Horaires</dt><dd>{{ $agency['hours'] }}</dd></div>
         </dl>
     </div></section>
 </div>

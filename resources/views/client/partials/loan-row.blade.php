@@ -20,7 +20,7 @@
                     Demande du {{ $loan->created_at->translatedFormat('j F') }} pour {{ $loan->duration_days }} jour(s). L’agence doit la confirmer.
                     @break
                 @case(\App\Models\LoanCart::READY)
-                    Confirmée. Présentez ce code à l’agence de Simon pour récupérer les clés et régler la location.
+                    Confirmée. Présentez ce code à l’agence ({{ $agency['city'] }}) pour récupérer les clés et régler la location.
                     <div style="margin-top:var(--s2)"><span class="pickup-code"><small>Code de retrait</small>{{ $loan->pickup_code }}</span></div>
                     @break
                 @case(\App\Models\LoanCart::APPROVED)

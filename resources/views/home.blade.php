@@ -1,6 +1,6 @@
 @extends('layouts.guest')
 
-@section('description', 'Location à la journée et vente de véhicules à Simon, Les Cayes. Réservez en ligne, récupérez à l’agence.')
+@section('description', 'Location à la journée et vente de véhicules à ' . $agency['city'] . '. Réservez en ligne, récupérez à l’agence.')
 
 @php
     $cta = auth()->check() ? auth()->user()->homeRoute() : route('register');
@@ -33,9 +33,9 @@
     <section class="hero">
         <div class="container hero__grid">
             <div>
-                <h1 class="display">Location et vente de véhicules aux Cayes.</h1>
+                <h1 class="display">Location et vente de véhicules à {{ \Illuminate\Support\Str::before($agency['city'], ',') }}.</h1>
                 <p class="lead" style="margin-top: var(--s5)">
-                    Choisissez un véhicule en ligne, réservez-le en deux minutes et récupérez les clés à notre agence de Simon.
+                    Choisissez un véhicule en ligne, réservez-le en deux minutes et récupérez les clés à notre agence de {{ $agency['city'] }}.
                     Le prix affiché est le prix payé.
                 </p>
                 <div class="hero__actions">
@@ -191,7 +191,7 @@
                     <li class="jstep jstep--last" data-journey-step>
                         <span class="jstep__node jstep__node--park" data-journey-node>P</span>
                         <div class="jstep__card">
-                            <h3 class="h2">Récupérez les clés à Simon</h3>
+                            <h3 class="h2">Récupérez les clés à l’agence</h3>
                             <p>Présentez votre code de retrait au comptoir, réglez sur place et repartez avec les clés et votre bon de sortie.</p>
                             <div class="jstep__demo jstep__demo--ticket">
                                 <span class="pickup-code"><small>Code de retrait</small>K7P-29Q</span>
@@ -214,15 +214,15 @@
                 <h2 class="h1">L’agence</h2>
                 <p class="lead" style="margin-top:var(--s3)">Une équipe sur place pour la remise des clés, les retours et les paiements.</p>
                 <dl class="agency__list">
-                    <div><x-icon name="pin" /><dt>Adresse</dt><dd>Simon, arrondissement des Cayes, Haïti</dd></div>
-                    <div><x-icon name="phone" /><dt>Téléphone</dt><dd><a href="tel:+50940160335">+509 40 16 03 35</a></dd></div>
-                    <div><x-icon name="mail" /><dt>E-mail</dt><dd><a href="mailto:contact@autogestion.ht">contact@autogestion.ht</a></dd></div>
-                    <div><x-icon name="clock" /><dt>Horaires</dt><dd>Lundi au vendredi, 8 h à 17 h<br><span class="muted" style="font-weight:400">Samedi sur rendez-vous</span></dd></div>
+                    <div><x-icon name="pin" /><dt>Adresse</dt><dd>{{ $agency['address'] }}</dd></div>
+                    <div><x-icon name="phone" /><dt>Téléphone</dt><dd><a href="{{ \App\Support\Agency::telHref() }}">{{ $agency['phone'] }}</a></dd></div>
+                    <div><x-icon name="mail" /><dt>E-mail</dt><dd><a href="mailto:{{ $agency['email'] }}">{{ $agency['email'] }}</a></dd></div>
+                    <div><x-icon name="clock" /><dt>Horaires</dt><dd>{{ $agency['hours'] }}@if ($agency['hours_note'])<br><span class="muted" style="font-weight:400">{{ $agency['hours_note'] }}</span>@endif</dd></div>
                 </dl>
             </div>
             <div class="agency__map">
-                <iframe title="Carte de l’agence à Simon, Les Cayes" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                        src="https://maps.google.com/maps?q=Simon,%20Cayes,%20Haiti&t=&z=13&ie=UTF-8&iwloc=&output=embed"></iframe>
+                <iframe title="Carte de l’agence, {{ $agency['city'] }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                        src="https://maps.google.com/maps?q={{ urlencode($agency['map_query'] ?: $agency['address']) }}&t=&z=13&ie=UTF-8&iwloc=&output=embed"></iframe>
             </div>
         </div>
     </section>
@@ -230,7 +230,7 @@
 
 <footer class="site-foot">
     <div class="container site-foot__in">
-        <span>© {{ date('Y') }} AutoGestion, Simon, Les Cayes</span>
+        <span>© {{ date('Y') }} {{ $agency['name'] }}, {{ $agency['city'] }}</span>
         <span><a href="{{ route('login') }}">Espace client</a></span>
     </div>
 </footer>

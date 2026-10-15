@@ -135,10 +135,12 @@ class LoanCart extends Model
         return (int) $this->transactions()->where('status', Transaction::PENDING)->sum('amount');
     }
 
-    /** Frè reta sijere: kantite jou reta × pri pa jou. */
+    /** Frè reta sijere: jou reta × pri pa jou × % ajans lan (Paramètres). */
     public function suggestedLateFee(): int
     {
-        return $this->daysLate() * (int) ($this->vehicle?->loan_price ?? 0);
+        $percent = (int) \App\Support\Agency::get('late_fee_percent', 100);
+
+        return (int) round($this->daysLate() * (int) ($this->vehicle?->loan_price ?? 0) * $percent / 100);
     }
 
     public function getReferenceAttribute(): string

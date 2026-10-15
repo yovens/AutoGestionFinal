@@ -11,17 +11,22 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    public const ADMIN      = 'ADMIN';
-    public const SECRETARY  = 'SECRETAIRE';
-    public const CLIENT     = 'CLIENT';
+    public const SUPER_ADMIN = 'SUPER_ADMIN';
+    public const ADMIN       = 'ADMIN';
+    public const SECRETARY   = 'SECRETAIRE';
+    public const CLIENT      = 'CLIENT';
 
     /** Wòl anplwaye ki ka travay nan comptoir la. */
-    public const STAFF = [self::ADMIN, self::SECRETARY];
+    public const STAFF = [self::SUPER_ADMIN, self::ADMIN, self::SECRETARY];
+
+    /** Wòl ki gen aksè ak administrasyon an. */
+    public const ADMINS = [self::SUPER_ADMIN, self::ADMIN];
 
     public const ROLE_LABELS = [
-        self::CLIENT    => 'Client',
-        self::SECRETARY => 'Secrétaire',
-        self::ADMIN     => 'Administrateur',
+        self::CLIENT      => 'Client',
+        self::SECRETARY   => 'Secrétaire',
+        self::ADMIN       => 'Administrateur',
+        self::SUPER_ADMIN => 'Super administrateur',
     ];
 
     public const ACTIVE  = 'ACTIVE';
@@ -49,9 +54,35 @@ class User extends Authenticatable
         return $this->hasMany(Cart::class);
     }
 
+    /** Admin oswa super admin (aksè ak administrasyon an). */
     public function isAdmin(): bool
     {
-        return $this->role === self::ADMIN;
+        return in_array($this->role, self::ADMINS, true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === self::SUPER_ADMIN;
+    }
+
+    /** Wòl moun sa a gen dwa bay lòt kont. Admin: kliyan ak sekretè. Super admin: tout. */
+    public function assignableRoles(): array
+    {
+        return match (true) {
+            $this->isSuperAdmin() => self::ROLE_LABELS,
+            $this->isAdmin()      => array_intersect_key(self::ROLE_LABELS, array_flip([self::CLIENT, self::SECRETARY])),
+            default               => [],
+        };
+    }
+
+    /** Èske moun sa a ka modifye / bloke / efase kont $other? */
+    public function canManage(User $other): bool
+    {
+        if ($this->is($other)) {
+            return false; // pwòp kont li: paj pwofil la sèlman
+        }
+
+        return array_key_exists($other->role, $this->assignableRoles());
     }
 
     public function isSecretary(): bool
@@ -73,7 +104,7 @@ class User extends Authenticatable
     public function homeRoute(): string
     {
         return match ($this->role) {
-            self::ADMIN     => route('admin.dashboard'),
+            self::SUPER_ADMIN, self::ADMIN => route('admin.dashboard'),
             self::SECRETARY => route('counter.index'),
             default         => route('client.dashboard'),
         };
