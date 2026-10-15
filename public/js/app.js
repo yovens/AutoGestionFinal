@@ -111,6 +111,94 @@
     update();
   });
 
+
+  /* ---------- Parcours (home): machin nan swiv wout la ak scroll la ---------- */
+  $$('[data-journey]').forEach(function (section) {
+    var track = $('[data-journey-track]', section);
+    var car = $('[data-journey-car]', section);
+    var svg = $('.journey__road', section);
+    var asphalt = $('.journey__asphalt', section);
+    var lane = $('.journey__lane', section);
+    var done = $('.journey__done', section);
+    var steps = $$('[data-journey-step]', section);
+    var nodes = $$('[data-journey-node]', section);
+    if (!track || !car || !asphalt || !nodes.length) return;
+
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var total = 0, nodeLen = [], cur = 0, target = 0, ticking = false;
+
+    function build() {
+      var t = track.getBoundingClientRect();
+      var narrow = t.width < 700;
+      var swing = narrow ? 12 : Math.min(80, t.width * 0.06);
+      var pts = nodes.map(function (n) {
+        var r = n.getBoundingClientRect();
+        return { x: r.left + r.width / 2 - t.left, y: r.top + r.height / 2 - t.top };
+      });
+      var d = 'M' + pts[0].x + ' 0';
+      var prev = { x: pts[0].x, y: 0 };
+      var parts = [];
+      pts.forEach(function (p, i) {
+        var dir = i % 2 === 0 ? 1 : -1;
+        var dy = p.y - prev.y;
+        d += ' C' + (prev.x + swing * dir) + ' ' + (prev.y + dy * 0.45) + ' ' + (p.x + swing * dir) + ' ' + (p.y - dy * 0.45) + ' ' + p.x + ' ' + p.y;
+        parts.push(d);
+        prev = p;
+      });
+      svg.setAttribute('width', t.width);
+      svg.setAttribute('height', t.height);
+      // Longè wout la jiska chak etap (pou limen etap yo lè machin nan rive)
+      nodeLen = parts.map(function (pd) { asphalt.setAttribute('d', pd); return asphalt.getTotalLength(); });
+      [asphalt, lane, done].forEach(function (p) { p.setAttribute('d', d); });
+      total = asphalt.getTotalLength();
+      done.style.strokeDasharray = total;
+      measure();
+      cur = target;
+      render();
+    }
+
+    // Jwenn longè wout la kote y = liy referans lan (55 % wotè ekran an)
+    function measure() {
+      var t = track.getBoundingClientRect();
+      var y = window.innerHeight * 0.55 - t.top;
+      if (y <= 0) { target = 0; return; }
+      var lo = 0, hi = total;
+      for (var i = 0; i < 22; i++) {
+        var mid = (lo + hi) / 2;
+        if (asphalt.getPointAtLength(mid).y < y) lo = mid; else hi = mid;
+      }
+      target = lo;
+    }
+
+    function render() {
+      var p = asphalt.getPointAtLength(cur);
+      var q = asphalt.getPointAtLength(Math.min(cur + 2, total));
+      var o = asphalt.getPointAtLength(Math.max(cur - 2, 0));
+      var angle = Math.atan2(q.y - o.y, q.x - o.x) * 180 / Math.PI - 90;
+      car.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px) rotate(' + angle + 'deg)';
+      done.style.strokeDashoffset = total - cur;
+      steps.forEach(function (s, i) { s.classList.toggle('is-active', cur >= nodeLen[i] - 4); });
+    }
+
+    function loop() {
+      var diff = target - cur;
+      cur = reduce || Math.abs(diff) < 0.5 ? target : cur + diff * 0.16;
+      render();
+      if (cur !== target) requestAnimationFrame(loop); else ticking = false;
+    }
+
+    function onScroll() {
+      measure();
+      if (!ticking) { ticking = true; requestAnimationFrame(loop); }
+    }
+
+    build();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', build);
+    window.addEventListener('load', build);
+    if (window.ResizeObserver) new ResizeObserver(function () { build(); }).observe(track);
+  });
+
   /* ---------- Apèsi imaj anvan upload ---------- */
   $$('input[type=file][data-preview]').forEach(function (input) {
     input.addEventListener('change', function () {
