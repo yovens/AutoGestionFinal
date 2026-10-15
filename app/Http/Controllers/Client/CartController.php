@@ -4,37 +4,37 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
-    // 📌 Affichage du panier
-    public function index()
+    public function index(Request $request)
     {
-        $cartItems = Cart::where('user_id', Auth::id())
-                        ->with('vehicle')
-                        ->get();
+        $cartItems = $request->user()->cartItems()->with('vehicle')->latest()->get()
+            ->filter(fn ($item) => $item->vehicle); // machin ki efase pa parèt
 
-        return view('client.cart', compact('cartItems')); // <<< IMPORTANT
+        return view('client.cart', compact('cartItems'));
     }
 
-    // 📌 Ajout au panier
-    public function add($vehicle_id)
+    public function add(Request $request, Vehicle $vehicle)
     {
-        Cart::create([
-            'user_id' => Auth::id(),
-            'vehicle_id' => $vehicle_id,
+        $item = Cart::firstOrCreate([
+            'user_id'    => $request->user()->id,
+            'vehicle_id' => $vehicle->id,
         ]);
 
-        return redirect()->route('client.cart')->with('success', 'Véhicule ajouté au panier !');
+        $message = $item->wasRecentlyCreated
+            ? "{$vehicle->name} ajouté à votre sélection."
+            : "{$vehicle->name} est déjà dans votre sélection.";
+
+        return back()->with('success', $message);
     }
 
-    // 📌 Suppression du panier
-    public function delete($id)
+    public function delete(Request $request, $id)
     {
-        Cart::where('user_id', Auth::id())->where('id', $id)->delete();
+        $request->user()->cartItems()->whereKey($id)->delete();
 
-        return back()->with('success', 'Élément supprimé du panier');
+        return back()->with('success', 'Véhicule retiré de votre sélection.');
     }
 }

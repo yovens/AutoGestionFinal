@@ -3,95 +3,62 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
 use App\Models\LoanCart;
+use App\Models\Transaction;
 use App\Models\Vehicle;
+use App\Services\FleetService;
 use Illuminate\Http\Request;
 
 class LoanController extends Controller
 {
-    // Commencer une location
-    public function start(Request $request, $id)
+    public function __construct(private FleetService $fleet)
     {
-        $vehicle = Vehicle::findOrFail($id);
-
-        // 🚨 Tcheke si machin nan disponib nan stock oswa si estati l deja sou 0
-        if ($vehicle->quantity <= 0 || $vehicle->status == 0) {
-            $vehicle->quantity = 0;
-            $vehicle->status = 0;
-            $vehicle->save();
-            
-            return back()->with('error', 'Ce véhicule est indisponible pour le moment.');
-        }
-
-        $duration = $request->input('duration', 5);
-        $total = $vehicle->loan_price * $duration;
-
-        // 🔻 Diminue stock la
-        $vehicle->quantity -= 1;
-
-        if ($vehicle->quantity == 0) {
-            $vehicle->status = 0;
-        }
-
-        $vehicle->save();
-
-        // KORIJE ISIT LA: Nou mete 'pending' (En attente) pou Admin nan ka jere l
-        LoanCart::create([
-            'user_id'       => Auth::id(),
-            'vehicle_id'    => $vehicle->id,
-            'status'        => 'pending', 
-            'duration_days' => $duration,
-            'total_amount'  => $total,
-            'start_date'    => null, // Li fenk mande, li poko kòmanse
-            'end_date'      => null,
-        ]);
-
-        return redirect()->route('client.loan')
-            ->with('success', "Votre demande de location a été soumise. En attente d'approbation.");
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $loans = LoanCart::where('user_id', Auth::id())
-                         ->with('vehicle')
-                         ->get();
+        LoanCart::syncExpired();
+
+        $loans = $request->user()->loans()->with('vehicle')->latest()->get();
 
         return view('client.loan', compact('loans'));
     }
 
-    public function transactions()
+    public function start(Request $request, Vehicle $vehicle)
     {
-        // ✅ Ranplase >get() pa ->get()
-        $transactions = \App\Models\Transaction::where('user_id', auth()->id())
-            ->with('vehicle')
-            ->get();
+        $data = $request->validate([
+            'duration' => 'required|integer|min:1|max:' . FleetService::MAX_DAYS,
+        ], [], ['duration' => 'durée']);
 
-        return view('client.transactions', compact('transactions'));
+        $this->fleet->requestLoan($request->user(), $vehicle->id, (int) $data['duration']);
+
+        return redirect()->route('client.loan')
+            ->with('success', 'Demande envoyée. L’agence vous confirme la location sous peu.');
     }
 
-public function renew(Request $request, $id)
-{
-    // Validate kantite jou yo
-    $request->validate([
-        'additional_days' => 'required|integer|min:1'
-    ]);
+    public function renew(Request $request, $id)
+    {
+        $data = $request->validate([
+            'additional_days' => 'required|integer|min:1|max:' . FleetService::MAX_DAYS,
+        ], [], ['additional_days' => 'nombre de jours']);
 
-    $loan = LoanCart::findOrFail($id);
+        // Kliyan an ka sèlman manyen pwòp lokasyon pa l.
+        $loan = $request->user()->loans()->findOrFail($id);
 
-    // Kliyan an ka mande renouvèlman sèlman si li apwouve oswa ekspire
-    if (!in_array($loan->status, ['approved', 'expired'])) {
-        return back()->with('error', 'Action non autorisée.');
+        $this->fleet->requestRenewal($loan, (int) $data['additional_days']);
+
+        return back()->with('success', 'Demande de prolongation envoyée à l’agence.');
     }
 
-    // Nou anrejistre demann lan
-    // Nòt: Ou ta dwe ajoute yon kolòn 'renewal_days_requested' nan tab loans ou
-   // Chanje non jaden an pou l matche
-$loan->update([
-    'status' => 'pending_renewal',
-    'renewal_requested_days' => $request->additional_days // Fè atansyon ak non an
-]);
-    
-    return back()->with('success', 'Votre demande de renouvellement a été envoyée à l\'administrateur.');
-}
+    public function transactions(Request $request)
+    {
+        $transactions = $request->user()->transactions()->with('vehicle')->latest()->get();
+
+        $totals = [
+            'paid'    => $transactions->where('status', Transaction::COMPLETED)->sum('amount'),
+            'pending' => $transactions->where('status', Transaction::PENDING)->sum('amount'),
+        ];
+
+        return view('client.transactions', compact('transactions', 'totals'));
+    }
 }

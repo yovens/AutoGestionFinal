@@ -1,29 +1,29 @@
 <?php
+
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\Contact;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail; // Importez la Facade Mail
-use App\Mail\AdminContactNotification; // Importez la classe Mailable
 
 class ContactController extends Controller
 {
-    public function index(){ return view('client.contact'); }
+    public function index(Request $request)
+    {
+        $history = Contact::where('user_id', $request->user()->id)->latest()->take(5)->get();
 
-  public function send(Request $request) {
-    $data = $request->validate([
-        'subject'=>'required|string|max:255',
-        'message'=>'required|string'
-    ]);
+        return view('client.contact', compact('history'));
+    }
 
-    // Sove nan baz done a
-    \App\Models\Contact::create([
-        'user_id' => auth()->id(),
-        'subject' => $data['subject'],
-        'message' => $data['message']
-    ]);
+    public function send(Request $request)
+    {
+        $data = $request->validate([
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|max:5000',
+        ]);
 
-    // (Ou ka kenbe kòd Mail la tou si ou vle)
-    return back()->with('success', 'Message envoyé!');
-}
+        Contact::create($data + ['user_id' => $request->user()->id]);
+
+        return back()->with('success', 'Message envoyé. L’agence vous répond par e-mail.');
+    }
 }

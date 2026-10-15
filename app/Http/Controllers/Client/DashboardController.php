@@ -1,61 +1,44 @@
 <?php
 
-
-
-
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cart;
 use App\Models\LoanCart;
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Vehicle;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
- 
-        $userName = $user->nom ?? $user->name ?? 'Client';
-        // 🔥 Comptage des données
-        $cartCount = Cart::where('user_id', $user->id)->count();
+        LoanCart::syncExpired();
 
-        $loanCount = LoanCart::where('user_id', $user->id)->count();
+        $user = $request->user();
 
-        $transactionCount = Transaction::where('user_id', $user->id)->count();
+        // Lokasyon ki toujou ap kouri oswa ki tann repons.
+        $activeLoans = $user->loans()->with('vehicle')
+            ->whereIn('status', LoanCart::HOLDING)
+            ->orderByRaw("CASE status WHEN 'expired' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END")
+            ->get();
 
-        $totalSpent = Transaction::where('user_id', $user->id)->sum('amount');
+        $pendingPurchases = $user->transactions()->with('vehicle')
+            ->where('type', Transaction::SALE)->where('status', Transaction::PENDING)->get();
 
-        // 🔥 Retourne bien toutes les variables à la vue
-     
-        return view('client.dashboard', compact('userName','cartCount','loanCount','transactionCount','totalSpent'));
- 
+        $stats = [
+            'cart'         => $user->cartItems()->count(),
+            'loans'        => $user->loans()->count(),
+            'transactions' => $user->transactions()->count(),
+            'spent'        => $user->transactions()->completed()->sum('amount'),
+        ];
+
+        $suggestions = Vehicle::available()->latest()->take(3)->get();
+
+        return view('client.dashboard', compact('user', 'activeLoans', 'pendingPurchases', 'stats', 'suggestions'));
     }
-               public function about() {
+
+    public function about()
+    {
         return view('client.about');
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
