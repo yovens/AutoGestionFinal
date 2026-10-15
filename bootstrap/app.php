@@ -4,6 +4,7 @@ use App\Exceptions\FleetException;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsClient;
+use App\Http\Middleware\IsStaff;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin'  => IsAdmin::class,
             'client' => IsClient::class,
+            'staff'  => IsStaff::class,
             'active' => CheckUserStatus::class,
         ]);
 

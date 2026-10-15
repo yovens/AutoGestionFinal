@@ -174,7 +174,7 @@
                         <span class="jstep__node" data-journey-node>3</span>
                         <div class="jstep__card">
                             <h3 class="h2">L’agence confirme</h3>
-                            <p>L’équipe valide votre demande. Dates, montant et retour prévu apparaissent dans votre espace.</p>
+                            <p>L’équipe valide votre demande et vous recevez un code de retrait dans votre espace.</p>
                             <div class="jstep__demo">
                                 <div class="row row--between">
                                     <span class="strong">{{ $demo?->name ?? 'Votre véhicule' }}</span>
@@ -192,12 +192,9 @@
                         <span class="jstep__node jstep__node--park" data-journey-node>P</span>
                         <div class="jstep__card">
                             <h3 class="h2">Récupérez les clés à Simon</h3>
-                            <p>Réglez sur place, signez, et repartez. Au retour, l’agence réceptionne le véhicule en quelques minutes.</p>
+                            <p>Présentez votre code de retrait au comptoir, réglez sur place et repartez avec les clés et votre bon de sortie.</p>
                             <div class="jstep__demo jstep__demo--ticket">
-                                <div>
-                                    <div class="small muted">Location</div>
-                                    <div class="ticket__ref num" style="font-size:1.2rem">LOC-00042</div>
-                                </div>
+                                <span class="pickup-code"><small>Code de retrait</small>K7P-29Q</span>
                                 <x-icon name="key" size="lg" />
                             </div>
                         </div>

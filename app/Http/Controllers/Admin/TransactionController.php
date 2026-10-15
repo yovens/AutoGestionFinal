@@ -22,7 +22,7 @@ class TransactionController extends Controller
         $status = $request->query('status');
 
         $transactions = Transaction::with('user', 'vehicle')
-            ->when(in_array($type, [Transaction::SALE, Transaction::RENTAL], true), fn ($q) => $q->where('type', $type))
+            ->when(array_key_exists((string) $type, Transaction::TYPE_LABELS), fn ($q) => $q->where('type', $type))
             ->when(array_key_exists((string) $status, Transaction::STATUS_LABELS), fn ($q) => $q->where('status', $status))
             ->latest()->get();
 
@@ -46,34 +46,24 @@ class TransactionController extends Controller
             'user_id'    => 'required|exists:users,id',
             'vehicle_id' => 'required|exists:vehicles,id',
             'amount'     => 'required|integer|min:0',
-            'type'       => ['required', Rule::in([Transaction::SALE, Transaction::RENTAL])],
-        ], [], ['user_id' => 'client', 'vehicle_id' => 'véhicule', 'amount' => 'montant']);
+            'type'       => ['required', Rule::in(array_keys(Transaction::TYPE_LABELS))],
+            'method'     => ['required', Rule::in(array_keys(Transaction::METHODS))],
+            'note'       => 'nullable|string|max:255',
+        ], [], ['user_id' => 'client', 'vehicle_id' => 'véhicule', 'amount' => 'montant', 'method' => 'mode de paiement']);
 
-        Transaction::create($data + ['status' => Transaction::COMPLETED]);
+        Transaction::create($data + ['status' => Transaction::COMPLETED, 'recorded_by' => $request->user()->id]);
 
         return redirect()->route('admin.transactions.index')->with('success', 'Paiement enregistré.');
     }
 
     public function show(Transaction $transaction)
     {
-        $transaction->load('user', 'vehicle', 'loan');
+        $transaction->load('user', 'vehicle', 'loan', 'recorder', 'tickets');
 
         return view('admin.transactions.show', compact('transaction'));
     }
 
-    public function confirm(Transaction $transaction)
-    {
-        $this->fleet->confirmSale($transaction);
 
-        return back()->with('success', "Paiement {$transaction->reference} confirmé.");
-    }
-
-    public function cancel(Transaction $transaction)
-    {
-        $this->fleet->cancelSale($transaction);
-
-        return back()->with('success', "Achat {$transaction->reference} annulé. Le véhicule est remis en vente.");
-    }
 
     public function destroy(Transaction $transaction)
     {

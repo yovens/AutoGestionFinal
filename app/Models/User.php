@@ -11,8 +11,18 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    public const ADMIN  = 'ADMIN';
-    public const CLIENT = 'CLIENT';
+    public const ADMIN      = 'ADMIN';
+    public const SECRETARY  = 'SECRETAIRE';
+    public const CLIENT     = 'CLIENT';
+
+    /** Wòl anplwaye ki ka travay nan comptoir la. */
+    public const STAFF = [self::ADMIN, self::SECRETARY];
+
+    public const ROLE_LABELS = [
+        self::CLIENT    => 'Client',
+        self::SECRETARY => 'Secrétaire',
+        self::ADMIN     => 'Administrateur',
+    ];
 
     public const ACTIVE  = 'ACTIVE';
     public const BLOCKED = 'BLOCKED';
@@ -44,6 +54,16 @@ class User extends Authenticatable
         return $this->role === self::ADMIN;
     }
 
+    public function isSecretary(): bool
+    {
+        return $this->role === self::SECRETARY;
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array($this->role, self::STAFF, true);
+    }
+
     public function isBlocked(): bool
     {
         return $this->status === self::BLOCKED;
@@ -52,15 +72,16 @@ class User extends Authenticatable
     /** Ki paj yon itilizatè dwe ateri lè l fin konekte. */
     public function homeRoute(): string
     {
-        return $this->isAdmin() ? route('admin.dashboard') : route('client.dashboard');
+        return match ($this->role) {
+            self::ADMIN     => route('admin.dashboard'),
+            self::SECRETARY => route('counter.index'),
+            default         => route('client.dashboard'),
+        };
     }
 
     public function getRoleLabelAttribute(): string
     {
-        return match ($this->role) {
-            self::ADMIN => 'Administrateur',
-            default     => 'Client',
-        };
+        return self::ROLE_LABELS[$this->role] ?? 'Client';
     }
 
     /**

@@ -20,7 +20,7 @@ class DashboardController extends Controller
             'clients'       => User::where('role', User::CLIENT)->count(),
             'fleet'         => Vehicle::sum('quantity') + LoanCart::whereIn('status', LoanCart::HOLDING)->count(),
             'available'     => (int) Vehicle::sum('quantity'),
-            'out'           => LoanCart::whereIn('status', [LoanCart::APPROVED, LoanCart::EXPIRED, LoanCart::PENDING_RENEWAL])->count(),
+            'out'           => LoanCart::whereIn('status', LoanCart::OUT)->count(),
             'revenueMonth'  => Transaction::completed()->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
             'revenueTotal'  => Transaction::completed()->sum('amount'),
             'unread'        => Contact::where('is_read', false)->count(),
@@ -29,6 +29,7 @@ class DashboardController extends Controller
         // Sa ki bezwen yon aksyon jodi a.
         $todo = [
             'pendingLoans'    => LoanCart::with('user', 'vehicle')->where('status', LoanCart::PENDING)->oldest()->get(),
+            'pickups'         => LoanCart::with('user', 'vehicle')->where('status', LoanCart::READY)->oldest('updated_at')->get(),
             'renewals'        => LoanCart::with('user', 'vehicle')->where('status', LoanCart::PENDING_RENEWAL)->oldest()->get(),
             'late'            => LoanCart::with('user', 'vehicle')->where('status', LoanCart::EXPIRED)->orderBy('end_date')->get(),
             'dueSoon'         => LoanCart::with('user', 'vehicle')->where('status', LoanCart::APPROVED)

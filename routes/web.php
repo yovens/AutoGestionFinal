@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
-use App\Http\Controllers\Admin\LoanController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VehicleController;
@@ -17,6 +16,13 @@ use App\Http\Controllers\Client\LoanController as ClientLoan;
 use App\Http\Controllers\Client\ProfileController;
 use App\Http\Controllers\Client\PurchaseController;
 use App\Http\Controllers\Client\VehicleController as ClientVehicle;
+use App\Http\Controllers\Client\TicketController as ClientTicket;
+use App\Http\Controllers\Counter\CashController;
+use App\Http\Controllers\Counter\ClientController as CounterClient;
+use App\Http\Controllers\Counter\DashboardController as CounterDashboard;
+use App\Http\Controllers\Counter\LoanController;
+use App\Http\Controllers\Counter\SaleController;
+use App\Http\Controllers\Counter\TicketController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SocialiteController;
 use Illuminate\Support\Facades\Route;
@@ -47,12 +53,6 @@ Route::post('/logout', [LogoutController::class, 'logout'])->middleware('auth')-
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboard::class, 'index'])->name('dashboard');
 
-    Route::controller(AdminProfileController::class)->group(function () {
-        Route::get('/profile', 'edit')->name('profile');
-        Route::put('/profile', 'update')->name('profile.update');
-        Route::put('/profile/password', 'updatePassword')->name('profile.password');
-    });
-
     // Itilizatè
     Route::resource('users', UserController::class)->except(['create', 'edit']);
     Route::post('/users/{user}/block', [UserController::class, 'block'])->name('users.block');
@@ -68,24 +68,58 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'admin'])-
         Route::delete('/{contact}', 'destroy')->name('destroy');
     });
 
+    // Tranzaksyon
+    Route::resource('transactions', TransactionController::class)->only(['index', 'show', 'store', 'destroy']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| COMPTOIR (sekretè + admin)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('comptoir')->name('counter.')->middleware(['auth', 'active', 'staff'])->group(function () {
+    Route::get('/', [CounterDashboard::class, 'index'])->name('index');
+    Route::get('/recherche', [CounterDashboard::class, 'search'])->name('search');
+
     // Lokasyon
-    Route::prefix('loans')->name('loans.')->controller(LoanController::class)->group(function () {
+    Route::prefix('locations')->name('loans.')->controller(LoanController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/nouvelle', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{loan}', 'show')->name('show');
-        Route::post('/{loan}/approve', 'approve')->name('approve');
-        Route::post('/{loan}/reject', 'reject')->name('reject');
-        Route::post('/{loan}/extend', 'extend')->name('extend');
-        Route::post('/{loan}/renewal/approve', 'approveRenewal')->name('renewal.approve');
-        Route::post('/{loan}/renewal/decline', 'declineRenewal')->name('renewal.decline');
-        Route::post('/{loan}/return', 'markReturned')->name('return');
+        Route::post('/{loan}/confirmer', 'approve')->name('approve');
+        Route::post('/{loan}/refuser', 'reject')->name('reject');
+        Route::post('/{loan}/annuler', 'cancel')->name('cancel');
+        Route::get('/{loan}/remise', 'checkoutForm')->name('checkout');
+        Route::post('/{loan}/remise', 'checkout')->name('checkout.store');
+        Route::get('/{loan}/retour', 'checkinForm')->name('checkin');
+        Route::post('/{loan}/retour', 'checkin')->name('checkin.store');
+        Route::post('/{loan}/prolonger', 'extend')->name('extend');
+        Route::post('/{loan}/prolongation/accepter', 'approveRenewal')->name('renewal.approve');
+        Route::post('/{loan}/prolongation/refuser', 'declineRenewal')->name('renewal.decline');
         Route::delete('/{loan}', 'destroy')->name('destroy');
     });
 
-    // Tranzaksyon
-    Route::resource('transactions', TransactionController::class)->only(['index', 'show', 'store', 'destroy']);
-    Route::post('/transactions/{transaction}/confirm', [TransactionController::class, 'confirm'])->name('transactions.confirm');
-    Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->name('transactions.cancel');
+    // Vant: ankese epi remèt machin nan
+    Route::post('/ventes/{transaction}/encaisser', [SaleController::class, 'confirm'])->name('sales.confirm');
+    Route::post('/ventes/{transaction}/annuler', [SaleController::class, 'cancel'])->name('sales.cancel');
+
+    // Kliyan
+    Route::get('/clients', [CounterClient::class, 'index'])->name('clients.index');
+    Route::post('/clients', [CounterClient::class, 'store'])->name('clients.store');
+    Route::get('/clients/{user}', [CounterClient::class, 'show'])->name('clients.show');
+
+    // Tikè ak kès
+    Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/caisse', [CashController::class, 'index'])->name('cash');
+
+    // Pwofil anplwaye (admin + sekretè)
+    Route::controller(AdminProfileController::class)->group(function () {
+        Route::get('/profil', 'edit')->name('profile');
+        Route::put('/profil', 'update')->name('profile.update');
+        Route::put('/profil/mot-de-passe', 'updatePassword')->name('profile.password');
+    });
 });
 
 /*
@@ -114,6 +148,7 @@ Route::prefix('client')->name('client.')->middleware(['auth', 'active', 'client'
     });
 
     Route::post('/purchase/start/{vehicle}', [PurchaseController::class, 'start'])->name('purchase.start');
+    Route::get('/tickets/{ticket}', [ClientTicket::class, 'show'])->name('tickets.show');
 
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'show')->name('profile');

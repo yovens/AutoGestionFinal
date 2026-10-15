@@ -12,7 +12,7 @@ class AdminProfileController extends Controller
 {
     public function edit(Request $request)
     {
-        return view('admin.profile', ['user' => $request->user()]);
+        return view('counter.profile', ['user' => $request->user()]);
     }
 
     public function update(Request $request)

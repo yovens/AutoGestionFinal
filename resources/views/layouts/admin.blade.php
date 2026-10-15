@@ -5,33 +5,58 @@
 </head>
 @php
     $me = auth()->user();
-    $links = [
-        ['route' => 'admin.dashboard',          'match' => 'admin.dashboard',       'icon' => 'dashboard', 'label' => 'Tableau de bord'],
-        ['route' => 'admin.loans.index',        'match' => 'admin.loans.*',         'icon' => 'key',       'label' => 'Locations',    'count' => $nav['loans'] ?? 0],
-        ['route' => 'admin.transactions.index', 'match' => 'admin.transactions.*',  'icon' => 'receipt',   'label' => 'Paiements',    'count' => $nav['payments'] ?? 0],
-        ['route' => 'admin.vehicles.index',     'match' => 'admin.vehicles.*',      'icon' => 'car',       'label' => 'Parc automobile'],
-        ['route' => 'admin.users.index',        'match' => 'admin.users.*',         'icon' => 'users',     'label' => 'Comptes'],
-        ['route' => 'admin.contacts.index',     'match' => 'admin.contacts.*',      'icon' => 'mail',      'label' => 'Messages',     'count' => $nav['messages'] ?? 0],
-    ];
+    // Meni an chanje selon wòl la: admin wè tout bagay, sekretè a wè sèlman comptoir la.
+    $groups = $me->isAdmin()
+        ? [
+            [
+                ['route' => 'admin.dashboard',          'match' => 'admin.dashboard',      'icon' => 'dashboard', 'label' => 'Tableau de bord'],
+                ['route' => 'counter.index',            'match' => ['counter.index', 'counter.search'], 'icon' => 'key', 'label' => 'Comptoir', 'count' => $nav['counter'] ?? 0],
+                ['route' => 'counter.loans.index',      'match' => 'counter.loans.*',      'icon' => 'calendar',  'label' => 'Locations',  'count' => $nav['loans'] ?? 0],
+                ['route' => 'admin.transactions.index', 'match' => 'admin.transactions.*', 'icon' => 'receipt',   'label' => 'Paiements',  'count' => $nav['payments'] ?? 0],
+                ['route' => 'admin.vehicles.index',     'match' => 'admin.vehicles.*',     'icon' => 'car',       'label' => 'Parc automobile'],
+                ['route' => 'admin.users.index',        'match' => 'admin.users.*',        'icon' => 'users',     'label' => 'Comptes'],
+                ['route' => 'admin.contacts.index',     'match' => 'admin.contacts.*',     'icon' => 'mail',      'label' => 'Messages',   'count' => $nav['messages'] ?? 0],
+            ],
+            [
+                ['route' => 'counter.tickets.index',    'match' => 'counter.tickets.*',    'icon' => 'printer',   'label' => 'Tickets'],
+                ['route' => 'counter.cash',             'match' => 'counter.cash',         'icon' => 'tag',       'label' => 'Caisse du jour'],
+            ],
+        ]
+        : [
+            [
+                ['route' => 'counter.index',            'match' => ['counter.index', 'counter.search'], 'icon' => 'key', 'label' => 'Comptoir', 'count' => $nav['counter'] ?? 0],
+                ['route' => 'counter.loans.create',     'match' => 'counter.loans.create', 'icon' => 'plus',      'label' => 'Nouvelle location'],
+                ['route' => 'counter.loans.index',      'match' => ['counter.loans.index', 'counter.loans.show', 'counter.loans.checkout', 'counter.loans.checkin'], 'icon' => 'calendar', 'label' => 'Locations', 'count' => $nav['loans'] ?? 0],
+                ['route' => 'counter.clients.index',    'match' => 'counter.clients.*',    'icon' => 'users',     'label' => 'Clients'],
+            ],
+            [
+                ['route' => 'counter.tickets.index',    'match' => 'counter.tickets.*',    'icon' => 'printer',   'label' => 'Tickets'],
+                ['route' => 'counter.cash',             'match' => 'counter.cash',         'icon' => 'tag',       'label' => 'Ma caisse du jour'],
+            ],
+        ];
 @endphp
 <body>
 <a class="skip-link" href="#main">Aller au contenu</a>
 <div class="admin" id="admin">
     <aside class="rail" aria-label="Navigation principale">
-        <a href="{{ route('admin.dashboard') }}" class="logo rail__brand">@include('layouts.partials.logo')</a>
+        <a href="{{ $me->homeRoute() }}" class="logo rail__brand">@include('layouts.partials.logo')</a>
 
         <nav class="rail__nav">
-            @foreach ($links as $l)
-                <a href="{{ route($l['route']) }}" class="rail__link" @if (request()->routeIs($l['match'])) aria-current="page" @endif>
-                    <x-icon :name="$l['icon']" />
-                    <span>{{ $l['label'] }}</span>
-                    @if (!empty($l['count']))<span class="count" title="À traiter">{{ $l['count'] }}</span>@endif
-                </a>
+            @foreach ($groups as $links)
+                <div class="rail__group">
+                    @foreach ($links as $l)
+                        <a href="{{ route($l['route']) }}" class="rail__link" @if (request()->routeIs(...(array) $l['match'])) aria-current="page" @endif>
+                            <x-icon :name="$l['icon']" />
+                            <span>{{ $l['label'] }}</span>
+                            @if (!empty($l['count']))<span class="count" title="À traiter">{{ $l['count'] }}</span>@endif
+                        </a>
+                    @endforeach
+                </div>
             @endforeach
         </nav>
 
         <div class="rail__foot">
-            <a href="{{ route('admin.profile') }}" class="rail__me" @if (request()->routeIs('admin.profile')) aria-current="page" @endif>
+            <a href="{{ route('counter.profile') }}" class="rail__me" @if (request()->routeIs('counter.profile')) aria-current="page" @endif>
                 <x-avatar :user="$me" />
                 <span class="person__text">
                     <span class="person__name" style="display:block">{{ $me->nom }}</span>

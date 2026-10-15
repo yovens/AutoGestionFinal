@@ -16,14 +16,32 @@
     <div class="stat"><div class="stat__label">Opérations</div><div class="stat__value num">{{ $transactions->count() }}</div></div>
 </div>
 
+@if ($tickets->isNotEmpty())
+    <section class="panel" style="margin-bottom:var(--s5)">
+        <div class="panel__head"><h2 class="h3">Mes bons</h2><span class="small muted">Bons de sortie, de retour et de remise remis à l’agence</span></div>
+        <div class="queue">
+            @foreach ($tickets as $tk)
+                <a href="{{ route('client.tickets.show', $tk) }}" class="queue__item" style="text-decoration:none;color:inherit">
+                    <x-icon name="receipt" />
+                    <div class="queue__main">
+                        <div class="queue__title">{{ $tk->title }} <span class="muted num">{{ $tk->code }}</span></div>
+                        <div class="queue__meta">{{ $tk->vehicle?->name }}, {{ $tk->created_at->translatedFormat('j M Y, H:i') }}</div>
+                    </div>
+                    <span class="strong num">@money($tk->amount)</span>
+                </a>
+            @endforeach
+        </div>
+    </section>
+@endif
+
 <section class="panel panel--flush">
     @if ($transactions->isEmpty())
-        <x-empty icon="receipt" title="Aucun paiement pour l’instant" text="Vos reçus apparaîtront ici dès qu’une location est confirmée ou qu’un achat est réservé." />
+        <x-empty icon="receipt" title="Aucun paiement pour l’instant" text="Vos paiements apparaîtront ici dès que vous réglez une location à l’agence ou réservez un achat." />
     @else
         <div class="table-wrap">
             <table class="table">
                 <thead>
-                    <tr><th>Référence</th><th>Véhicule</th><th>Type</th><th>Date</th><th>Statut</th><th class="right">Montant</th></tr>
+                    <tr><th>Référence</th><th>Véhicule</th><th>Type</th><th>Date</th><th>Mode</th><th>Statut</th><th class="right">Montant</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($transactions as $t)
@@ -33,8 +51,9 @@
                                 <span class="strong">{{ $t->vehicle?->name ?? 'Véhicule supprimé' }}</span>
                                 @if ($t->vehicle)<span class="table__sub">{{ $t->vehicle->plate }}</span>@endif
                             </td>
-                            <td>{{ $t->type_label }}</td>
+                            <td>{{ $t->note ?: $t->type_label }}</td>
                             <td class="nowrap">{{ $t->created_at->translatedFormat('j M Y') }}</td>
+                            <td>{{ $t->method_label }}</td>
                             <td><x-status :model="$t" /></td>
                             <td class="right strong num">@money($t->amount)</td>
                         </tr>

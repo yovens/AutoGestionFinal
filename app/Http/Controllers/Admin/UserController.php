@@ -22,7 +22,7 @@ class UserController extends Controller
                 ->where('nom', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('telephone', 'like', "%{$search}%")))
-            ->when(in_array($role, [User::ADMIN, User::CLIENT], true), fn ($q) => $q->where('role', $role))
+            ->when(array_key_exists((string) $role, User::ROLE_LABELS), fn ($q) => $q->where('role', $role))
             ->orderBy('nom')
             ->get();
 
@@ -36,7 +36,7 @@ class UserController extends Controller
             'email'     => 'required|email|max:255|unique:users',
             'telephone' => 'nullable|string|max:30',
             'password'  => 'required|string|min:8',
-            'role'      => ['required', Rule::in([User::CLIENT, User::ADMIN])],
+            'role'      => ['required', Rule::in(array_keys(User::ROLE_LABELS))],
         ]);
 
         $data['password'] = Hash::make($data['password']);
@@ -65,7 +65,7 @@ class UserController extends Controller
             'nom'       => 'required|string|max:255',
             'email'     => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'telephone' => 'nullable|string|max:30',
-            'role'      => ['required', Rule::in([User::CLIENT, User::ADMIN])],
+            'role'      => ['required', Rule::in(array_keys(User::ROLE_LABELS))],
         ]);
 
         if ($user->is(auth()->user()) && $data['role'] !== $user->role) {

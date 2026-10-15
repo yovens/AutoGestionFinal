@@ -34,6 +34,7 @@
         <a href="{{ $q(['type' => null]) }}" @if (!$type) aria-current="page" @endif>Tous</a>
         <a href="{{ $q(['type' => $T::SALE]) }}" @if ($type === $T::SALE) aria-current="page" @endif>Achats</a>
         <a href="{{ $q(['type' => $T::RENTAL]) }}" @if ($type === $T::RENTAL) aria-current="page" @endif>Locations</a>
+        <a href="{{ $q(['type' => $T::FEE]) }}" @if ($type === $T::FEE) aria-current="page" @endif>Frais</a>
     </nav>
     <nav class="tabs" aria-label="Filtrer par statut">
         <a href="{{ $q(['status' => null]) }}" @if (!$status) aria-current="page" @endif>Tous statuts</a>
@@ -49,33 +50,37 @@
     @else
         <div class="table-wrap">
             <table class="table">
-                <thead><tr><th>Référence</th><th>Client</th><th>Véhicule</th><th>Type</th><th>Statut</th><th class="right">Montant</th><th class="right"><span class="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th>Référence</th><th>Client</th><th>Véhicule</th><th>Type</th><th>Mode</th><th>Statut</th><th class="right">Montant</th><th class="right"><span class="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                     @foreach ($transactions as $t)
                         <tr class="{{ $t->status === $T::PENDING ? 'is-wait' : '' }}">
                             <td><a href="{{ route('admin.transactions.show', $t) }}" class="table__link num">{{ $t->reference }}</a><span class="table__sub">{{ $t->created_at->translatedFormat('j M Y, H:i') }}</span></td>
                             <td>{{ $t->user?->nom ?? 'Compte supprimé' }}</td>
                             <td><span class="nowrap">{{ $t->vehicle?->name ?? '—' }}</span>@if ($t->vehicle)<span class="table__sub">{{ $t->vehicle->plate }}</span>@endif</td>
-                            <td>{{ $t->type_label }}</td>
+                            <td>{{ $t->type_label }}@if ($t->note)<span class="table__sub">{{ $t->note }}</span>@endif</td>
+                            <td>{{ $t->method_label }}</td>
                             <td><x-status :model="$t" /></td>
                             <td class="right strong num">@money($t->amount)</td>
                             <td>
                                 <div class="actions">
-                                    @if ($t->status === $T::PENDING)
-                                        <form method="POST" action="{{ route('admin.transactions.confirm', $t) }}" class="inline-form" data-confirm="Confirmer le paiement de {{ \App\Providers\AppServiceProvider::money($t->amount) }} ?">
-                                            @csrf<button type="submit" class="btn btn--sm btn--ok">Paiement reçu</button>
-                                        </form>
+                                    @if ($t->status === $T::PENDING && $t->type === $T::SALE)
+                                        <button type="button" class="btn btn--sm btn--ok" data-dialog-open="sale-{{ $t->id }}">Encaisser</button>
                                     @endif
                                     <a href="{{ route('admin.transactions.show', $t) }}" class="btn btn--sm btn--ghost btn--icon" aria-label="Voir le reçu"><x-icon name="chevron-right" size="sm" /></a>
                                 </div>
                             </td>
                         </tr>
+                        @if ($t->status === $T::PENDING && $t->type === $T::SALE)
+                            @push('dialogs')@include('counter.partials.sale-dialog', ['t' => $t])@endpush
+                        @endif
                     @endforeach
                 </tbody>
             </table>
         </div>
     @endif
 </section>
+
+@stack('dialogs')
 
 <x-dialog id="new" title="Enregistrer un paiement" :open-on-load="$errors->any()">
     <form method="POST" action="{{ route('admin.transactions.store') }}">
@@ -85,9 +90,11 @@
             <x-field name="user_id" type="select" label="Client" placeholder="Choisir un client" required :options="$clients->mapWithKeys(fn ($c) => [$c->id => $c->nom . ' (' . $c->email . ')'])->all()" />
             <x-field name="vehicle_id" type="select" label="Véhicule" placeholder="Choisir un véhicule" required :options="$vehicles->mapWithKeys(fn ($v) => [$v->id => $v->name . ' (' . $v->plate . ')'])->all()" />
             <div class="form-grid">
-                <x-field name="type" type="select" label="Type" :value="'location'" :options="[$T::RENTAL => 'Location', $T::SALE => 'Achat']" />
+                <x-field name="type" type="select" label="Type" :value="'location'" :options="$T::TYPE_LABELS" />
                 <x-field name="amount" type="number" label="Montant ($)" min="0" required />
             </div>
+            <x-methods id-prefix="tx" required />
+            <x-field name="note" label="Motif" placeholder="Ex. frais de nettoyage" maxlength="255" />
         </div>
         <div class="modal__foot">
             <button type="button" class="btn" data-dialog-close>Annuler</button>

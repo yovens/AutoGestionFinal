@@ -90,13 +90,24 @@
     var days = $('[data-days]', root);
     var total = $('[data-total]', root);
     var price = Number(root.dataset.price || 0);
+    // Pri a ka soti nan yon <select> machin (comptoir: nouvelle location)
+    var source = $('[data-price-source]', root);
+    if (source) {
+      var syncPrice = function () {
+        var opt = source.options[source.selectedIndex];
+        price = Number(opt && opt.dataset.price || 0);
+        update();
+      };
+      source.addEventListener('change', syncPrice);
+      setTimeout(syncPrice, 0);
+    }
     var fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
     var max = Number(days ? days.max : 365) || 365;
 
     function update() {
       if (!days || !total) return;
       var n = Math.min(Math.max(parseInt(days.value, 10) || 1, 1), max);
-      total.textContent = fmt.format(n * price) + ' $';
+      total.textContent = price ? fmt.format(n * price) + '\u00A0$' : '—';
       var lbl = $('[data-days-label]', root);
       if (lbl) lbl.textContent = n + (n > 1 ? ' jours' : ' jour');
     }
@@ -197,6 +208,23 @@
     window.addEventListener('resize', build);
     window.addEventListener('load', build);
     if (window.ResizeObserver) new ResizeObserver(function () { build(); }).observe(track);
+  });
+
+
+  /* ---------- Retou comptoir: total frè an dirèk ---------- */
+  $$('[data-sum]').forEach(function (form) {
+    var out = $('[data-sum-total]', form);
+    var pay = $('[data-needs-payment]', form);
+    var base = Number(form.dataset.base || 0);
+    var fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+    function update() {
+      var sum = base;
+      $$('[data-add]', form).forEach(function (i) { sum += Math.max(0, parseInt(i.value, 10) || 0); });
+      if (out) out.textContent = fmt.format(sum) + ' $';
+      if (pay) pay.hidden = sum <= 0;
+    }
+    form.addEventListener('input', update);
+    update();
   });
 
   /* ---------- Apèsi imaj anvan upload ---------- */

@@ -16,7 +16,7 @@
 <div class="grid-2">
     <section class="panel">
         <div class="panel__head"><h2 class="h3">Informations</h2></div>
-        <form method="POST" action="{{ route('admin.profile.update') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('counter.profile.update') }}" enctype="multipart/form-data">
             @csrf @method('PUT')
             <div class="panel__body stack">
                 <div class="row">
@@ -39,7 +39,7 @@
 
     <section class="panel">
         <div class="panel__head"><h2 class="h3">Mot de passe</h2></div>
-        <form method="POST" action="{{ route('admin.profile.password') }}">
+        <form method="POST" action="{{ route('counter.profile.password') }}">
             @csrf @method('PUT')
             <div class="panel__body stack">
                 <x-field name="current_password" type="password" label="Mot de passe actuel" autocomplete="current-password" required />

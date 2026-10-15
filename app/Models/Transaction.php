@@ -8,6 +8,15 @@ class Transaction extends Model
 {
     public const SALE   = 'vente';
     public const RENTAL = 'location';
+    public const FEE    = 'frais';     // reta, domaj, kabiran...
+
+    public const METHODS = [
+        'cash'     => 'Espèces',
+        'moncash'  => 'MonCash',
+        'natcash'  => 'NatCash',
+        'card'     => 'Carte',
+        'transfer' => 'Virement',
+    ];
 
     public const PENDING   = 'pending';
     public const COMPLETED = 'completed';
@@ -16,10 +25,11 @@ class Transaction extends Model
     public const TYPE_LABELS = [
         self::SALE   => 'Achat',
         self::RENTAL => 'Location',
+        self::FEE    => 'Frais',
     ];
 
     public const STATUS_LABELS = [
-        self::PENDING   => 'À confirmer',
+        self::PENDING   => 'À encaisser',
         self::COMPLETED => 'Réglée',
         self::CANCELLED => 'Annulée',
     ];
@@ -30,7 +40,7 @@ class Transaction extends Model
         self::CANCELLED => 'off',
     ];
 
-    protected $fillable = ['user_id', 'vehicle_id', 'loan_cart_id', 'amount', 'type', 'status'];
+    protected $fillable = ['user_id', 'vehicle_id', 'loan_cart_id', 'amount', 'type', 'status', 'method', 'recorded_by', 'note'];
 
     protected $casts = [
         'amount' => 'integer',
@@ -49,6 +59,21 @@ class Transaction extends Model
     public function loan()
     {
         return $this->belongsTo(LoanCart::class, 'loan_cart_id');
+    }
+
+    public function recorder()
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    public function getMethodLabelAttribute(): string
+    {
+        return self::METHODS[$this->method] ?? '—';
     }
 
     public function scopeCompleted($query)
