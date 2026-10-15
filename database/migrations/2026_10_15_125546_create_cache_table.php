@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Sote si tab yo deja la (eg. kreye ak `php artisan make:cache-table`).
+        if (Schema::hasTable('cache')) {
+            return;
+        }
+
         Schema::create('cache', function (Blueprint $table) {
             $table->string('key')->primary();
             $table->mediumText('value');
