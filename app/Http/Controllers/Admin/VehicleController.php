@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LoanCart;
 use App\Models\Vehicle;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,8 @@ class VehicleController extends Controller
         $data = $this->validated($request);
         $data['image'] = $request->file('image')->store('vehicles', 'public');
 
-        Vehicle::create($data);
+        $vehicle = Vehicle::create($data);
+        Audit::log('vehicle.create', "Véhicule ajouté : {$vehicle->name} ({$vehicle->plate})", $vehicle, $vehicle->only(['price', 'loan_price', 'quantity']));
 
         return redirect()->route('admin.vehicles.index')->with('success', "{$data['brand']} {$data['model']} ajouté au parc.");
     }
@@ -55,7 +57,15 @@ class VehicleController extends Controller
             $data['image'] = $request->file('image')->store('vehicles', 'public');
         }
 
-        $vehicle->update($data);
+        $vehicle->fill($data);
+        $changes = collect($vehicle->getDirty())->except(['updated_at', 'image'])
+            ->mapWithKeys(fn ($new, $key) => [$key => [$vehicle->getOriginal($key), $new]])->all();
+        $vehicle->save();
+        if ($changes || $request->hasFile('image')) {
+            $labels = ['price' => 'prix de vente', 'loan_price' => 'prix/jour', 'quantity' => 'stock', 'plate' => 'plaque', 'brand' => 'marque', 'model' => 'modèle', 'year' => 'année', 'status' => 'disponibilité'];
+            $summary = collect($changes)->except('status')->map(fn ($v, $k) => ($labels[$k] ?? $k) . ' ' . $v[0] . ' → ' . $v[1])->implode(', ');
+            Audit::log('vehicle.update', "Véhicule modifié {$vehicle->plate}" . ($summary ? " : {$summary}" : ' (photo)'), $vehicle, $changes);
+        }
 
         return back()->with('success', "{$vehicle->name} mis à jour.");
     }
@@ -70,6 +80,7 @@ class VehicleController extends Controller
             Storage::disk('public')->delete($vehicle->image);
         }
 
+        Audit::log('vehicle.delete', "Véhicule supprimé : {$vehicle->name} ({$vehicle->plate})");
         $vehicle->delete();
 
         return redirect()->route('admin.vehicles.index')->with('success', 'Véhicule supprimé.');

@@ -23,8 +23,8 @@
     {{-- Tikè a menm: fòma 80 mm pou enprimant tikè, li parèt sèl sou papye a --}}
     <article class="receipt" aria-label="{{ $ticket->title }}">
         <header class="receipt__head">
-            <div class="receipt__brand">AutoGestion</div>
-            <div style="font-size:11px;color:#555">Simon, Les Cayes, +509 40 16 03 35</div>
+            <div class="receipt__brand">{{ $agency['name'] }}</div>
+            <div style="font-size:11px;color:#555">{{ $agency['address'] }}<br>{{ $agency['phone'] }}</div>
             <div class="receipt__title">{{ mb_strtoupper($ticket->title) }}</div>
             <div class="receipt__code">{{ $ticket->code }}</div>
             <div style="font-size:12px">{{ $ticket->created_at->translatedFormat('j F Y, H:i') }}</div>
@@ -77,9 +77,10 @@
         <p class="receipt__foot">
             @switch($ticket->kind)
                 @case($T::CHECKOUT) Conservez ce bon et présentez-le au retour du véhicule. @break
-                @case($T::CHECKIN) Merci d’avoir choisi AutoGestion. @break
+                @case($T::CHECKIN) Merci d’avoir choisi {{ $agency['name'] }}. @break
                 @default Clés et documents du véhicule remis au client.
             @endswitch
+            @if ($agency['ticket_footer'])<br>{{ $agency['ticket_footer'] }}@endif
         </p>
     </article>
 

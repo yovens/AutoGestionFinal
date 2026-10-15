@@ -10,6 +10,9 @@
 
 @php
     $isMe = $user->is(auth()->user());
+    $canManage = auth()->user()->canManage($user);
+    $roles = auth()->user()->assignableRoles();
+    if (!array_key_exists($user->role, $roles)) { $roles = [$user->role => $user->role_label] + $roles; }
     $paid = $user->transactions->where('status', \App\Models\Transaction::COMPLETED)->sum('amount');
 @endphp
 
@@ -26,7 +29,7 @@
             </div>
         </div>
     </div>
-    @unless ($isMe)
+    @if ($canManage)
         <div class="page-head__actions">
             <form method="POST" action="{{ route('admin.users.block', $user) }}" data-confirm="{{ $user->isBlocked() ? 'Réactiver' : 'Suspendre' }} ce compte ?">
                 @csrf
@@ -37,7 +40,7 @@
                 <button type="submit" class="btn btn--danger"><x-icon name="trash" size="sm" /> Supprimer</button>
             </form>
         </div>
-    @endunless
+    @endif
 </div>
 
 <div class="stats" style="--cols:3;margin-bottom:var(--s5)">
@@ -97,14 +100,16 @@
         <form method="POST" action="{{ route('admin.users.update', $user) }}">
             @csrf @method('PUT')
             <div class="panel__body stack">
-                <x-field name="nom" label="Nom complet" :value="$user->nom" required />
-                <x-field name="email" type="email" label="E-mail" :value="$user->email" required />
-                <x-field name="telephone" type="tel" label="Téléphone" :value="$user->telephone" />
-                <x-field name="role" type="select" label="Rôle" :value="$user->role" :options="\App\Models\User::ROLE_LABELS" :disabled="$isMe"
-                         :hint="$isMe ? 'Vous ne pouvez pas changer votre propre rôle.' : null" />
-                @if ($isMe)<input type="hidden" name="role" value="{{ $user->role }}">@endif
+                <x-field name="nom" label="Nom complet" :value="$user->nom" required :readonly="!$canManage && !$isMe" />
+                <x-field name="email" type="email" label="E-mail" :value="$user->email" required :readonly="!$canManage && !$isMe" />
+                <x-field name="telephone" type="tel" label="Téléphone" :value="$user->telephone" :readonly="!$canManage && !$isMe" />
+                <x-field name="role" type="select" label="Rôle" :value="$user->role" :options="$roles" :disabled="$isMe || !$canManage"
+                         :hint="$isMe ? 'Vous ne pouvez pas changer votre propre rôle.' : (!$canManage ? 'Réservé au super administrateur.' : null)" />
+                @if ($isMe || !$canManage)<input type="hidden" name="role" value="{{ $user->role }}">@endif
             </div>
-            <div class="panel__foot row row--end"><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+            @if ($canManage || $isMe)
+                <div class="panel__foot row row--end"><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+            @endif
         </form>
     </section>
 </div>

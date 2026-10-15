@@ -65,7 +65,7 @@
                 <h2 class="h3">Paiement</h2>
                 <x-methods id-prefix="co" required />
                 <div class="form-grid">
-                    <x-field name="deposit" type="number" label="Caution reçue ($)" :value="0" min="0" hint="Rendue au retour si tout est en ordre." />
+                    <x-field name="deposit" type="number" label="Caution reçue ($)" :value="$agency['default_deposit']" min="0" hint="Rendue au retour si tout est en ordre." />
                 </div>
             </div>
         </div>

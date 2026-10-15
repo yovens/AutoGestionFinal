@@ -71,8 +71,8 @@
 
 <footer class="site-foot">
     <div class="container site-foot__in">
-        <span>AutoGestion, Simon, Les Cayes</span>
-        <span><a href="tel:+50940160335">+509 40 16 03 35</a>, lun. au ven. de 8 h à 17 h</span>
+        <span>{{ $agency['name'] }}, {{ $agency['city'] }}</span>
+        <span><a href="{{ \App\Support\Agency::telHref() }}">{{ $agency['phone'] }}</a>, {{ $agency['hours'] }}</span>
     </div>
 </footer>
 @stack('scripts')

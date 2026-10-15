@@ -71,7 +71,10 @@ class DemoSeeder extends Seeder
 
         $v = fn ($plate) => Vehicle::where('plate', $plate)->value('id');
 
-        $admin = User::where('role', User::ADMIN)->first();
+        User::firstOrCreate(['email' => 'gerant@autogestion.ht'], [
+            'nom' => 'Frantz Pierre-Louis', 'telephone' => '+509 38 40 55 12',
+            'password' => Hash::make('password'), 'role' => User::ADMIN, 'status' => User::ACTIVE,
+        ]);
         $desk = User::firstOrCreate(['email' => 'secretaire@autogestion.ht'], [
             'nom' => 'Mirlande Joseph', 'telephone' => '+509 36 22 18 40',
             'password' => Hash::make('password'), 'role' => User::SECRETARY, 'status' => User::ACTIVE,

@@ -21,6 +21,11 @@
                 ['route' => 'counter.tickets.index',    'match' => 'counter.tickets.*',    'icon' => 'printer',   'label' => 'Tickets'],
                 ['route' => 'counter.cash',             'match' => 'counter.cash',         'icon' => 'tag',       'label' => 'Caisse du jour'],
             ],
+            ...($me->isSuperAdmin() ? [[
+                ['route' => 'super.reports',            'match' => 'super.reports*',       'icon' => 'dashboard', 'label' => 'Rapports'],
+                ['route' => 'super.activity',           'match' => 'super.activity',       'icon' => 'clock',     'label' => 'Journal d’activité'],
+                ['route' => 'super.settings',           'match' => 'super.settings*',      'icon' => 'shield',    'label' => 'Paramètres'],
+            ]] : []),
         ]
         : [
             [
