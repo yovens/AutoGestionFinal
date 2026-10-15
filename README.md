@@ -1,139 +1,63 @@
-🚗 AutoGestion
+# AutoGestion
 
-Système complet de gestion de véhicules développé avec Laravel, permettant la gestion des ventes, locations, clients et transactions dans une interface admin moderne.
+Application Laravel de location et de vente de véhicules pour l’agence de Simon (Les Cayes) : catalogue client, demandes de location, achats réservés, suivi des retours et des paiements côté administration.
 
-📌 Table des matières
-À propos
-Fonctionnalités
-Technologies
-Installation
-Configuration
-Structure du projet
-Modules
-Routes principales
-Sécurité
-Améliorations futures
-Licence
-Auteur
-📖 À propos
+## Installation
 
-AutoGestion est une application web de gestion de flotte de véhicules permettant :
-
-Gestion des véhicules (CRUD)
-Vente de véhicules
-Location de véhicules
-Suivi des clients
-Gestion des transactions
-Interface admin moderne (dark mode)
-Interface client intuitive
-✨ Fonctionnalités
-🚗 Gestion des véhicules
-Ajouter / modifier / supprimer un véhicule
-Upload d’image
-Prix de vente et location
-Statut de disponibilité
-Gestion du stock (quantity)
-👤 Clients
-Inscription / connexion
-Consultation des véhicules
-Location de véhicules
-Achat de véhicules
-Historique personnel
-📦 Locations
-Création de location
-Durée personnalisée
-Calcul automatique du prix
-Historique des locations
-💰 Transactions
-Suivi des paiements
-Historique des achats
-Liaison client ↔ véhicule
-🧑‍💼 Admin
-Dashboard complet
-Gestion des véhicules
-Gestion des clients
-Suivi des locations
-Suivi des ventes
-🛠️ Technologies utilisées
-Laravel (PHP Framework)
-Blade (Template Engine)
-MySQL (Base de données)
-Bootstrap / CSS personnalisé
-JavaScript (modales et interactions)
-Laravel Storage (images véhicules)
-⚙️ Installation
-git clone https://github.com/ton-repo/autogestion.git
-cd autogestion
-
+```bash
 composer install
-npm install
-
-cp .env.example .env
+cp .env.example .env          # puis renseigner DB_*, MAIL_*, GOOGLE_*
 php artisan key:generate
-
 php artisan migrate
+php artisan db:seed           # crée le compte admin (admin@gmail.com / 123456 — à changer)
 php artisan storage:link
-
 php artisan serve
-🔧 Configuration (.env)
-APP_NAME=AutoGestion
-APP_ENV=local
-APP_KEY=base64:xxx
-APP_DEBUG=true
-APP_URL=http://localhost
+```
 
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=autogestion
-DB_USERNAME=root
-DB_PASSWORD=
-🚗 Modules principaux
-🔹 Véhicules
-CRUD complet
-Upload d’images
-Gestion stock
-Prix vente / location
-🔹 Locations
-Création de location
-Calcul automatique
-Historique
-🔹 Achats
-Achat immédiat
-Enregistrement transaction
-🔹 Clients
-Interface utilisateur
-Historique personnel
-🔹 Admin
-Gestion complète du système
-🔐 Sécurité
-Authentification Laravel
-Middleware admin / client
-Protection CSRF
-Validation des formulaires
-Gestion des rôles et accès
-📊 Améliorations futures
+Données de démonstration (13 véhicules avec photos, 5 clients, locations et paiements) :
 
-🔥 Dashboard statistiques (revenus, ventes, locations)
-🔥 API mobile (Flutter / React Native)
-🔥 Paiement en ligne (Stripe / Mobile Money)
-🔥 Notifications (email / SMS)
-🔥 Chat client-admin
-🔥 Système de réservation avancé
-🔥 Graphiques dynamiques
+```bash
+php artisan db:seed --class=DemoSeeder     # mot de passe des clients : password
+```
 
-🧠 Objectif du projet
+### Tâche planifiée
 
-Créer une plateforme complète de gestion de véhicules comme :
+Les locations dont la date de fin est dépassée passent en « Délai dépassé » chaque nuit. Sur le serveur, ajoutez une fois :
 
-Uber Fleet
-Système de location SaaS
-Marketplace de véhicules
-📄 Licence
+```
+* * * * * cd /chemin/vers/autogestion && php artisan schedule:run >> /dev/null 2>&1
+```
 
-Ce projet est sous licence MIT.
+En local : `php artisan loans:sync-expired` (le statut est aussi recalculé à l’ouverture des pages de location).
 
-🚀 Auteur
+## Règles métier
 
-Développé par Jocelyn Youvens Dions
+Toute la logique de stock, de location et de vente est dans `app/Services/FleetService.php`. Les contrôleurs admin et client (et bientôt secrétaire) passent par ce service.
 
+| Étape | Effet sur le stock | Paiement |
+|---|---|---|
+| Le client demande une location (`pending`) | −1 | — |
+| L’admin approuve (`approved`) | — | location enregistrée, réglée |
+| L’admin refuse (`rejected`) | +1 | — |
+| Date de fin dépassée (`expired`) | — | — |
+| Prolongation demandée puis acceptée | — | supplément enregistré |
+| Retour du véhicule (`returned`) | +1 | — |
+| Le client réserve un achat | −1 | achat « à confirmer » |
+| L’admin confirme le paiement | — | achat réglé |
+| L’admin annule l’achat | +1 | achat annulé |
+
+Les opérations de stock sont faites en transaction avec verrou (`lockForUpdate`) pour éviter deux réservations du même dernier véhicule.
+
+## Interface
+
+- Aucun build front nécessaire : `public/css/app.css` et `public/js/app.js` sont chargés directement.
+- Police Archivo hébergée localement (`public/fonts`, licence OFL) : fonctionne sans Google Fonts.
+- Composants Blade dans `resources/views/components` : `x-plate`, `x-badge`, `x-status`, `x-field`, `x-dialog`, `x-empty`, `x-icon`, `x-avatar`, `x-vehicle-card`.
+- Layouts : `layouts.admin`, `layouts.client`, `layouts.guest`.
+- Thème clair, sombre ou selon l’appareil (menu du compte).
+- Messages de validation en français : `lang/fr`.
+
+## Prochaines étapes
+
+- Rôle secrétaire : tickets de remise et de retour des véhicules (le gabarit `.ticket` est déjà dans le CSS).
+- Rôle super administrateur.
