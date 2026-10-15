@@ -57,7 +57,4 @@ Les opérations de stock sont faites en transaction avec verrou (`lockForUpdate`
 - Thème clair, sombre ou selon l’appareil (menu du compte).
 - Messages de validation en français : `lang/fr`.
 
-## Prochaines étapes
 
-- Rôle secrétaire : tickets de remise et de retour des véhicules (le gabarit `.ticket` est déjà dans le CSS).
-- Rôle super administrateur.
