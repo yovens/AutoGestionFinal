@@ -4,88 +4,53 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AdminProfileController extends Controller
 {
-    /**
-     * Affiche la page profil admin
-     */
-    public function edit()
+    public function edit(Request $request)
     {
-        $admin = Auth::user(); 
-
-        if (!$admin) {
-            return redirect('/login')->withErrors('Veuillez vous connecter.');
-        }
-
-        return view('admin.profile', [
-            'adminName' => $admin->nom ?? $admin->name ?? 'Administrateur',
-            'adminRole' => $admin->role ?? 'Admin Principal',
-            'adminProfilePic' => $admin->profile_photo_path 
-                ? Storage::url($admin->profile_photo_path)
-                : 'https://via.placeholder.com/120/38bdf8/ffffff?text=AD',
-
-            'adminPresentation' => $admin->bio ?? 'Aucune bio définie.'
-        ]);
+        return view('admin.profile', ['user' => $request->user()]);
     }
 
-    /**
-     * Mise à jour des informations de base
-     */
     public function update(Request $request)
     {
-        $admin = Auth::user();
+        $user = $request->user();
 
-        $request->validate([
-            'nom' => 'required|string|max:255',
-            'presentation' => 'nullable|max:500',
+        $data = $request->validate([
+            'nom'           => 'required|string|max:255',
+            'email'         => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'telephone'     => 'nullable|string|max:30',
+            'bio'           => 'nullable|string|max:500',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         if ($request->hasFile('profile_image')) {
-            if ($admin->profile_photo_path) {
-                Storage::delete($admin->profile_photo_path);
+            foreach (array_filter([$user->profile_image, $user->profile_photo_path]) as $old) {
+                Storage::disk('public')->delete($old);
             }
-
-            $admin->profile_photo_path = $request->file('profile_image')
-                                                ->store('profile-photos', 'public');
+            $data['profile_image'] = $request->file('profile_image')->store('profiles', 'public');
+            $user->profile_photo_path = null;
         }
 
-        $admin->nom = $request->nom;
-        $admin->bio = $request->presentation;
-        $admin->save();
+        $user->fill($data)->save();
 
-        return back()->with('success', 'Profil mis à jour avec succès !');
+        return back()->with('success', 'Profil mis à jour.');
     }
 
-    /**
-     * Mise à jour du mot de passe de l'administrateur
-     */
     public function updatePassword(Request $request)
     {
-        $admin = Auth::user();
-
         $request->validate([
-            'current_password' => 'required',
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'current_password' => 'required|current_password',
+            'password'         => 'required|string|min:8|confirmed',
         ], [
-            'password.confirmed' => 'La confirmation du nouveau mot de passe ne correspond pas.',
-            'password.min' => 'Le nouveau mot de passe doit contenir au moins 8 caractères.'
+            'current_password.current_password' => 'Le mot de passe actuel est incorrect.',
         ]);
 
-        // Tcheke si ansyen modpas li tape a se sa ki nan baz de done a vre
-        if (!Hash::check($request->current_password, $admin->password)) {
-            return back()->withErrors(['current_password' => 'Le mot de passe actuel est incorrect.']);
-        }
+        $request->user()->update(['password' => Hash::make($request->password)]);
 
-        // Chanje modpas la epi ankripte l ak Hash
-        $admin->password = Hash::make($request->password);
-        $admin->save();
-
-        return back()->with('success', 'Votre mot de passe a été modifié avec succès !');
+        return back()->with('success', 'Mot de passe modifié.');
     }
 }

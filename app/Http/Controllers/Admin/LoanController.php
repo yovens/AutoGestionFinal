@@ -1,180 +1,119 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoanCart;
+use App\Models\User;
+use App\Models\Vehicle;
+use App\Services\FleetService;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class LoanController extends Controller
 {
-    public function index() {
-        // Otomatikman tcheke si dat yo ekspire pandan n ap chaje paj la
-        $loans = LoanCart::with('user','vehicle')->get();
-        foreach($loans as $loan) {
-            if ($loan->status === 'approved' && $loan->isExpired()) {
-                $loan->status = 'expired';
-                $loan->save();
-            }
-        }
-        return view('admin.loans.index', compact('loans'));
+    public function __construct(private FleetService $fleet)
+    {
     }
 
-    // Paj detay Lokasyon an (Show)
-    public function show($id) {
-        $loan = LoanCart::with('user', 'vehicle')->findOrFail($id);
-        
-        // Si estati a te approved men dat la pase, nou mete l sou expired
-        if ($loan->status === 'approved' && $loan->isExpired()) {
-            $loan->status = 'expired';
-            $loan->save();
-        }
+    public function index(Request $request)
+    {
+        LoanCart::syncExpired();
+
+        $filter = $request->query('status');
+
+        $loans = LoanCart::with('user', 'vehicle')
+            ->when($filter === 'active', fn ($q) => $q->whereIn('status', [LoanCart::APPROVED, LoanCart::EXPIRED, LoanCart::PENDING_RENEWAL]))
+            ->when($filter && $filter !== 'active', fn ($q) => $q->where('status', $filter))
+            ->latest()->get();
+
+        $counts = LoanCart::selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+
+        $clients = User::where('role', User::CLIENT)->where('status', User::ACTIVE)->orderBy('nom')->get(['id', 'nom', 'email']);
+        $vehicles = Vehicle::available()->orderBy('brand')->get();
+
+        return view('admin.loans.index', compact('loans', 'counts', 'filter', 'clients', 'vehicles'));
+    }
+
+    public function show(LoanCart $loan)
+    {
+        LoanCart::syncExpired();
+        $loan->refresh()->load('user', 'vehicle', 'transactions');
 
         return view('admin.loans.show', compact('loan'));
     }
 
-    // Apwouve oswa Refize yon lokasyon
-    public function update(Request $request, $id) {
-        $loan = LoanCart::with('vehicle')->findOrFail($id);
-        $status = $request->input('status');
+    /** Lokasyon kreye nan biwo a: li kòmanse touswit epi peman an anrejistre. */
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'user_id'       => 'required|exists:users,id',
+            'vehicle_id'    => 'required|exists:vehicles,id',
+            'duration_days' => 'required|integer|min:1|max:' . FleetService::MAX_DAYS,
+        ], [], ['user_id' => 'client', 'vehicle_id' => 'véhicule', 'duration_days' => 'durée']);
 
-        if ($status === 'approved') {
-            $loan->start_date = Carbon::now();
-            // 🔥 KORREKSYON: Fòse l tounen (int) pou Carbon pa bay erè
-            $loan->end_date = Carbon::now()->addDays((int) $loan->duration_days);
-            $loan->status = 'approved';
-        } elseif ($status === 'rejected') {
-            $loan->status = 'rejected';
-            $loan->start_date = null;
-            $loan->end_date = null;
+        $loan = $this->fleet->createApprovedLoan($data['user_id'], $data['vehicle_id'], (int) $data['duration_days']);
 
-            // Si nou refize l, nou remèt machin nan nan stock la
-            $vehicle = $loan->vehicle;
-            if ($vehicle) {
-                $vehicle->quantity += 1;
-                $vehicle->status = 1;
-                $vehicle->save();
-            }
-        } else {
-            $loan->status = $status;
-        }
-
-        $loan->save();
-        return redirect()->route('admin.loans.index')->with('success', 'Statut mis à jour avec succès');
+        return redirect()->route('admin.loans.show', $loan)->with('success', 'Location créée et paiement enregistré.');
     }
 
-    // Admin Renouvle Lokasyon an
-    public function renew(Request $request, $id) {
-        $loan = LoanCart::findOrFail($id);
-        
-        $request->validate([
-            'additional_days' => 'required|integer|min:1'
+    public function approve(LoanCart $loan)
+    {
+        $this->fleet->approveLoan($loan);
+
+        return back()->with('success', 'Location approuvée. Le paiement a été ajouté aux transactions.');
+    }
+
+    public function reject(LoanCart $loan)
+    {
+        $this->fleet->rejectLoan($loan);
+
+        return back()->with('success', 'Demande refusée. Le véhicule est de nouveau disponible.');
+    }
+
+    /** Admin nan prolonje dirèkteman. */
+    public function extend(Request $request, LoanCart $loan)
+    {
+        $data = $request->validate([
+            'additional_days' => 'required|integer|min:1|max:' . FleetService::MAX_DAYS,
+        ], [], ['additional_days' => 'nombre de jours']);
+
+        $this->fleet->extendLoan($loan, (int) $data['additional_days']);
+
+        return back()->with('success', "Location prolongée de {$data['additional_days']} jour(s).");
+    }
+
+    /** Aksepte demann prolongasyon kliyan an (admin nan ka chanje kantite jou a). */
+    public function approveRenewal(Request $request, LoanCart $loan)
+    {
+        $data = $request->validate([
+            'additional_days' => 'nullable|integer|min:1|max:' . FleetService::MAX_DAYS,
         ]);
 
-        $days = (int) $request->input('additional_days'); // 🔥 KORREKSYON: Konvèti an int
-        $vehicle = $loan->vehicle;
+        $days = (int) ($data['additional_days'] ?? $loan->renewal_requested_days);
 
-        // Kalkile nouvo pri a
-        $additional_price = $vehicle->loan_price * $days;
+        $this->fleet->extendLoan($loan, $days);
 
-        $loan->duration_days += $days;
-        $loan->total_amount += $additional_price;
-        
-        // Si li te fini deja, nou rekòmanse dat la jodi a, si l te aktif nou ajoute sou dat la
-        if ($loan->status === 'expired' || !$loan->end_date) {
-            $loan->start_date = Carbon::now();
-            $loan->end_date = Carbon::now()->addDays($days);
-        } else {
-            $loan->end_date = Carbon::parse($loan->end_date)->addDays($days);
-        }
-
-        $loan->status = 'approved'; // Li tounen aktif/apwouve ankò
-        $loan->save();
-
-        return back()->with('success', "Location renouvelée de $days jours avec succès !");
+        return back()->with('success', "Prolongation de {$days} jour(s) acceptée.");
     }
 
-    public function destroy($id)
+    public function declineRenewal(LoanCart $loan)
     {
-        // Chèche lokasyon an ak ID a, si l pa jwenn li l ap bay erè 404 pwòp
-        $loan = LoanCart::with('vehicle')->findOrFail($id);
-        
-        $vehicle = $loan->vehicle;
-        if ($vehicle && $loan->status !== 'rejected') {
-            $vehicle->quantity += 1;
-            if($vehicle->quantity > 0) {
-                $vehicle->status = 1;
-            }
-            $vehicle->save();
-        }
-        
-        $loan->delete();
-        
-        return redirect()->route('admin.loans.index')->with('success', 'Location supprimée avec succès !');
+        $this->fleet->declineRenewal($loan);
+
+        return back()->with('success', 'Demande de prolongation refusée.');
     }
 
-  public function store(Request $request)
-{
-    // ... (validation ou deja la) ...
+    public function markReturned(LoanCart $loan)
+    {
+        $this->fleet->returnLoan($loan);
 
-    $vehicle = \App\Models\Vehicle::findOrFail($request->vehicle_id);
-
-    // Tcheke stock
-    if ($vehicle->quantity <= 0) {
-        return redirect()->back()->with('error', 'Désolé, ce véhicule est épuisé.');
+        return back()->with('success', 'Retour enregistré. Le véhicule est de nouveau disponible.');
     }
 
-    // DIMINYE STOCK LA
-    $vehicle->quantity -= 1;
-    if ($vehicle->quantity == 0) {
-        $vehicle->status = 0; // Machin nan vin inaktif
+    public function destroy(LoanCart $loan)
+    {
+        $this->fleet->deleteLoan($loan);
+
+        return redirect()->route('admin.loans.index')->with('success', 'Location supprimée.');
     }
-    $vehicle->save();
-
-    // KREYE LOKASYON AN
-    $loan = new LoanCart();
-    $loan->user_id = $request->user_id;
-    $loan->vehicle_id = $request->vehicle_id;
-    $loan->duration_days = (int) $request->duration_days;
-    $loan->total_amount = $vehicle->loan_price * $loan->duration_days;
-    
-    // 🔥 ASIRE W ESTATI A SE 'approved' ISIT LA
-    $loan->status = 'approved'; 
-    $loan->start_date = Carbon::now();
-    $loan->end_date = Carbon::now()->addDays($loan->duration_days);
-    
-    $loan->save(); // Sove lokasyon an
-
-    return redirect()->route('admin.loans.index')->with('success', 'Location créée avec succès.');
-}
-
-// Nan Admin\LoanController.php
-public function approveRenewal(Request $request, $id)
-{
-    $loan = LoanCart::with('vehicle')->findOrFail($id);
-    
-    $inputDays = $request->input('additional_days');
-    $days = (int)($inputDays ?: $loan->renewal_requested_days);
-
-    if ($days < 1) {
-        return back()->with('error', 'Le nombre de jours doit être supérieur à 0.');
-    }
-
-    // 1. Kalkile nouvo pri: 
-    // Pri total = Pri pou chak jou * (Ansyen total jou + Nouvo jou)
-    $vehiclePrice = $loan->vehicle->loan_price;
-    $newTotalDays = $loan->duration_days + $days;
-    $loan->total_amount = $vehiclePrice * $newTotalDays;
-
-    // 2. Mete ajou dat ak dire
-    $loan->end_date = Carbon::parse($loan->end_date)->addDays($days);
-    $loan->duration_days = $newTotalDays;
-    
-    // 3. Reset demann lan epi sove
-    $loan->renewal_requested_days = null;
-    $loan->status = 'approved'; 
-    $loan->save();
-
-    return back()->with('success', "Renouvellement approuvé. Nouveau total : " . $loan->total_amount . " USD");
-}
 }

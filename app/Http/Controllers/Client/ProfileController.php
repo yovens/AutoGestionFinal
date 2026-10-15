@@ -5,58 +5,50 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
-class ProfileController extends Controller {
-
-    public function show() {
-    // Nou chèche itilizatè a ki konekte kounye a
-    $user = auth()->user(); 
-
-    // Nou pase varyab 'user' la nan View a
-    return view('client.profile', compact('user'));
-}
-
- public function update(Request $request) {
-    $user = auth()->user();
-
-    // 1. Validasyon (sèvi ak 'nom' olye de 'name')
-    $request->validate([
-        'nom' => 'required|string|max:255',
-        'email' => 'required|email|unique:users,email,' . $user->id,
-    ]);
-
-    // 2. Aktyalizasyon done
-    $user->nom = $request->nom; // Sa a enpòtan!
-    $user->email = $request->email;
-    
-    // Si ou gen yon jaden pou foto (profile_image), asire w li nan $fillable nan User.php
-    if ($request->hasFile('profile_image')) {
-        $path = $request->file('profile_image')->store('profiles', 'public');
-        $user->profile_image = $path;
-    }
-
-    $user->save();
-
-    return back()->with('success', 'Profil mis à jour avec succès!');
-}
-
-public function updatePassword(Request $request)
+class ProfileController extends Controller
 {
-    $request->validate([
-        'current_password' => 'required',
-        'password' => 'required|min:8',
-    ]);
-
-    $user = auth()->user();
-
-    if (!Hash::check($request->current_password, $user->password)) {
-        return back()->withErrors(['current_password' => 'Mot de passe actuel incorrect.']);
+    public function show(Request $request)
+    {
+        return view('client.profile', ['user' => $request->user()]);
     }
 
-    $user->password = Hash::make($request->password);
-    $user->save();
+    public function update(Request $request)
+    {
+        $user = $request->user();
 
-    return back()->with('success', 'Mot de passe modifié avec succès!');
-}
-    
+        $data = $request->validate([
+            'nom'           => 'required|string|max:255',
+            'email'         => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'telephone'     => 'nullable|string|max:30',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        if ($request->hasFile('profile_image')) {
+            if ($user->profile_image) {
+                Storage::disk('public')->delete($user->profile_image);
+            }
+            $data['profile_image'] = $request->file('profile_image')->store('profiles', 'public');
+        }
+
+        $user->update($data);
+
+        return back()->with('success', 'Profil mis à jour.');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|current_password',
+            'password'         => 'required|string|min:8|confirmed',
+        ], [
+            'current_password.current_password' => 'Le mot de passe actuel est incorrect.',
+        ]);
+
+        $request->user()->update(['password' => Hash::make($request->password)]);
+
+        return back()->with('success', 'Mot de passe modifié.');
+    }
 }

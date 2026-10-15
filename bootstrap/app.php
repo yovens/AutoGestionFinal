@@ -1,8 +1,13 @@
 <?php
 
+use App\Exceptions\FleetException;
+use App\Http\Middleware\CheckUserStatus;
+use App\Http\Middleware\IsAdmin;
+use App\Http\Middleware\IsClient;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,8 +16,22 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'admin'  => IsAdmin::class,
+            'client' => IsClient::class,
+            'active' => CheckUserStatus::class,
+        ]);
+
+        // Yon moun ki deja konekte ki louvri /login oswa /register ale dirèk sou espas li.
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->homeRoute() ?? '/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Règ biznis ki pa respekte (stock vid, move estati...) → retounen sou paj la ak mesaj la.
+        $exceptions->render(function (FleetException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return back()->withInput()->with('error', $e->getMessage());
+        });
     })->create();
