@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Lè lokal Ayiti: enpòtan pou dat fen lokasyon yo.
+    'timezone' => 'America/Port-au-Prince',
 
     /*
     |--------------------------------------------------------------------------
@@ -78,11 +79,15 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // L'aplikasyon an se an fransè sèlman: nou fikse lang lan pou mesaj validasyon ak dat yo.
+    'locale' => 'fr',
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => 'fr',
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'fr_FR'),
+
+    // Senbòl lajan ki parèt bò kote montan yo (@money).
+    'currency_symbol' => env('APP_CURRENCY_SYMBOL', '$'),
 
     /*
     |--------------------------------------------------------------------------

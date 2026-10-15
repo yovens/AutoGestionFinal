@@ -1,0 +1,123 @@
+/* AutoGestion — ti entèraksyon pou tout aplikasyon an. Pa gen depandans. */
+(function () {
+  'use strict';
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+
+  /* ---------- Tèm (klè / fonse / sistèm) ---------- */
+  function storedTheme() {
+    try { return localStorage.getItem('ag-theme') || 'system'; } catch (e) { return 'system'; }
+  }
+  function applyTheme(mode) {
+    if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
+    else document.documentElement.removeAttribute('data-theme');
+    $$('[data-theme-set]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.themeSet === mode)); });
+  }
+  applyTheme(storedTheme());
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-theme-set]');
+    if (!b) return;
+    try { localStorage.setItem('ag-theme', b.dataset.themeSet); } catch (err) { /* navigatè prive */ }
+    applyTheme(b.dataset.themeSet);
+  });
+
+  /* ---------- Dyalòg ---------- */
+  document.addEventListener('click', function (e) {
+    var opener = e.target.closest('[data-dialog-open]');
+    if (opener) {
+      var d = document.getElementById(opener.dataset.dialogOpen);
+      if (d && d.showModal) { d.showModal(); var f = $('[autofocus], input:not([type=hidden]), select, textarea', d); if (f) f.focus(); }
+      return;
+    }
+    var closer = e.target.closest('[data-dialog-close]');
+    if (closer) { var dlg = closer.closest('dialog'); if (dlg) dlg.close(); return; }
+    // Klike sou fon an fèmen dyalòg la
+    if (e.target.tagName === 'DIALOG' && e.target.classList.contains('modal')) {
+      var r = e.target.getBoundingClientRect();
+      var inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) e.target.close();
+    }
+  });
+  // Si fòm nan te gen erè, relouvri dyalòg la otomatikman
+  $$('dialog[data-open-on-load]').forEach(function (d) { if (d.showModal) d.showModal(); });
+  // Lyen ki fini ak #new (eg. depi dashboard la) louvri dyalòg kreyasyon an
+  if (location.hash === '#new') { var nd = document.getElementById('new'); if (nd && nd.showModal && !nd.open) nd.showModal(); }
+
+  /* ---------- Konfimasyon anvan aksyon danjere ---------- */
+  document.addEventListener('submit', function (e) {
+    var msg = e.target.getAttribute('data-confirm');
+    if (msg && !window.confirm(msg)) e.preventDefault();
+  });
+
+  /* ---------- Meni navigasyon mobil ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-nav-toggle]');
+    if (t) {
+      var target = document.querySelector(t.dataset.navToggle);
+      if (!target) return;
+      var open = target.classList.toggle(t.dataset.navClass || 'is-open');
+      t.setAttribute('aria-expanded', String(open));
+      return;
+    }
+    if (e.target.closest('[data-nav-close]')) {
+      $$('.is-nav-open').forEach(function (el) { el.classList.remove('is-nav-open'); });
+    }
+    // Fèmen meni dewoulan yo lè w klike deyò
+    $$('details.menu[open]').forEach(function (m) { if (!m.contains(e.target)) m.removeAttribute('open'); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    $$('details.menu[open]').forEach(function (m) { m.removeAttribute('open'); });
+    $$('.is-nav-open').forEach(function (el) { el.classList.remove('is-nav-open'); });
+  });
+
+  /* ---------- Fèmen mesaj flash ---------- */
+  document.addEventListener('click', function (e) {
+    var c = e.target.closest('.flash__close');
+    if (c) c.closest('.flash').remove();
+  });
+
+  /* ---------- Rezèvasyon: Louer / Acheter + kalkil total ---------- */
+  $$('[data-booking]').forEach(function (root) {
+    var panes = $$('[data-pane]', root);
+    $$('input[name="mode"]', root).forEach(function (r) {
+      r.addEventListener('change', function () {
+        panes.forEach(function (p) { p.hidden = p.dataset.pane !== r.value; });
+      });
+    });
+
+    var days = $('[data-days]', root);
+    var total = $('[data-total]', root);
+    var price = Number(root.dataset.price || 0);
+    var fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+    var max = Number(days ? days.max : 365) || 365;
+
+    function update() {
+      if (!days || !total) return;
+      var n = Math.min(Math.max(parseInt(days.value, 10) || 1, 1), max);
+      total.textContent = fmt.format(n * price) + ' $';
+      var lbl = $('[data-days-label]', root);
+      if (lbl) lbl.textContent = n + (n > 1 ? ' jours' : ' jour');
+    }
+    $$('[data-step]', root).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var n = (parseInt(days.value, 10) || 1) + Number(b.dataset.step);
+        days.value = Math.min(Math.max(n, 1), max);
+        update();
+      });
+    });
+    if (days) days.addEventListener('input', update);
+    update();
+  });
+
+  /* ---------- Apèsi imaj anvan upload ---------- */
+  $$('input[type=file][data-preview]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var img = document.querySelector(input.dataset.preview);
+      if (!img || !input.files || !input.files[0]) return;
+      img.src = URL.createObjectURL(input.files[0]);
+      img.hidden = false;
+    });
+  });
+})();

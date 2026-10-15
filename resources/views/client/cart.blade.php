@@ -1,110 +1,44 @@
 @extends('layouts.client')
 
-@section('title', 'Mon Panier')
+@section('title', 'Ma sélection')
 
 @section('content')
-<main class="panier-wrapper">
-    <h2 class="panier-title"><i class="fas fa-shopping-cart"></i> Mon Panier</h2>
+<div class="page__head">
+    <div>
+        <h1 class="h1">Ma sélection</h1>
+        <p class="muted">Les véhicules que vous gardez de côté. Rien n’est réservé tant que vous n’avez pas fait de demande.</p>
+    </div>
+</div>
 
-    @if($cartItems->isEmpty())
-        <div class="empty-cart">Votre panier est vide.</div>
-    @else
-        <div class="panier-grid">
-            <div class="items-list">
-                @foreach($cartItems as $item)
-                <div class="product-card">
-                    <img src="{{ asset('storage/' . $item->vehicle->image) }}" alt="Véhicule">
-                    <div class="info">
-                        <h5>{{ $item->vehicle->brand }} {{ $item->vehicle->model }}</h5>
-                        <p>{{ number_format($item->vehicle->price, 0) }} USD</p>
-                    </div>
-                    <form method="POST" action="{{ route('client.cart.delete', $item->id) }}">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn-delete">Supprimer</button>
-                    </form>
+<section class="panel">
+    @forelse ($cartItems as $item)
+        @php $v = $item->vehicle; @endphp
+        <div class="loan">
+            @if ($v->image_url)<img class="loan__img" src="{{ $v->image_url }}" alt="">@else<span class="loan__img"></span>@endif
+            <div>
+                <div class="row row--tight" style="margin-bottom:2px">
+                    <a href="{{ route('client.vehicle.show', $v) }}" class="loan__name table__link">{{ $v->name }}</a>
+                    <x-plate :plate="$v->plate" />
                 </div>
-                @endforeach
+                <div class="loan__meta num">{{ $v->year }}, location @money($v->loan_price) par jour, achat @money($v->price)</div>
+                @unless ($v->is_available)
+                    <x-badge style="margin-top:6px">Indisponible pour le moment</x-badge>
+                @endunless
             </div>
-
-            <div class="summary-box">
-                <h5>Résumé</h5>
-                <hr>
-                <div class="total">
-                    <span>Total</span>
-                    <strong>{{ number_format($cartItems->sum(fn($i) => $i->vehicle->price), 0) }} USD</strong>
+            <div class="loan__side">
+                <div class="row row--tight">
+                    <form method="POST" action="{{ route('client.cart.delete', $item->id) }}" class="inline-form">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn--sm btn--ghost">Retirer</button>
+                    </form>
+                    <a href="{{ route('client.vehicle.show', $v) }}" class="btn btn--sm btn--primary" @unless ($v->is_available) aria-disabled="true" @endunless>Réserver</a>
                 </div>
-                <button class="btn-checkout">Passer à la caisse</button>
             </div>
         </div>
-    @endif
-</main>
+    @empty
+        <x-empty icon="bag" title="Votre sélection est vide" text="Sur la fiche d’un véhicule, choisissez « Garder dans ma sélection » pour le comparer plus tard.">
+            <a href="{{ route('client.vehicles') }}" class="btn btn--primary">Parcourir les véhicules</a>
+        </x-empty>
+    @endforelse
+</section>
 @endsection
-
-
-
-<style>
-    /* 1. Conteneur principal : limité à 1000px, centré sur la page */
-    .panier-wrapper {
-        max-width: 1000px;
-        margin: 40px auto;
-        padding: 0 20px;
-    }
-
-    .panier-title { margin-bottom: 25px; color: var(--text-color); }
-
-    /* 2. Grille : 2 colonnes (liste à gauche, résumé à droite) */
-    .panier-grid {
-        display: grid;
-        grid-template-columns: 1fr 350px; /* La liste prend tout l'espace, résumé fixe 350px */
-        gap: 30px;
-        align-items: start;
-    }
-
-    /* 3. Style des cartes de produits */
-    .product-card {
-        display: flex;
-        align-items: center;
-        background: var(--card-bg);
-        padding: 15px;
-        border-radius: 15px;
-        margin-bottom: 15px;
-        border: 1px solid rgba(0,0,0,0.05);
-        box-shadow: var(--shadow);
-    }
-
-    .product-card img {
-        width: 100px;
-        height: 80px;
-        object-fit: cover;
-        border-radius: 10px;
-    }
-
-    .info { flex-grow: 1; margin-left: 20px; }
-    .info h5 { margin: 0; font-size: 1.1rem; }
-    .info p { margin: 0; color: var(--primary); font-weight: bold; }
-
-    /* 4. Style du résumé */
-    .summary-box {
-        background: var(--card-bg);
-        padding: 25px;
-        border-radius: 15px;
-        border: 1px solid rgba(0,0,0,0.05);
-        box-shadow: var(--shadow);
-        position: sticky; /* Reste fixe au scroll */
-        top: 20px;
-    }
-
-    .total { display: flex; justify-content: space-between; margin: 15px 0; font-size: 1.2rem; }
-
-    /* 5. Boutons */
-    .btn-delete { background: #fee2e2; color: #991b1b; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-    .btn-delete:hover { background: #fecaca; }
-    
-    .btn-checkout { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    .btn-checkout:hover { opacity: 0.9; }
-
-    /* 6. Responsive : Si écran petit (mobile), on empile tout */
-    @media (max-width: 768px) {
-        .panier-grid { grid-template-columns: 1fr; }
-    }
-</style>
