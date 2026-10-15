@@ -19,6 +19,10 @@
                 @case(\App\Models\LoanCart::PENDING)
                     Demande du {{ $loan->created_at->translatedFormat('j F') }} pour {{ $loan->duration_days }} jour(s). L’agence doit la confirmer.
                     @break
+                @case(\App\Models\LoanCart::READY)
+                    Confirmée. Présentez ce code à l’agence de Simon pour récupérer les clés et régler la location.
+                    <div style="margin-top:var(--s2)"><span class="pickup-code"><small>Code de retrait</small>{{ $loan->pickup_code }}</span></div>
+                    @break
                 @case(\App\Models\LoanCart::APPROVED)
                     Du {{ $loan->start_date->translatedFormat('j F') }} au {{ $loan->end_date->translatedFormat('j F Y') }}.
                     <strong class="strong" style="color:var(--text)">{{ $loan->daysLeft() === 0 ? 'Retour aujourd’hui' : $loan->daysLeft() . ' jour(s) restant(s)' }}</strong>
@@ -32,6 +36,9 @@
                     @break
                 @case(\App\Models\LoanCart::RETURNED)
                     Rendue le {{ $loan->returned_at?->translatedFormat('j F Y') }} après {{ $loan->duration_days }} jour(s).
+                    @break
+                @case(\App\Models\LoanCart::CANCELLED)
+                    Confirmée mais pas récupérée : la réservation a été annulée.
                     @break
                 @default
                     Demande du {{ $loan->created_at->translatedFormat('j F Y') }}.
@@ -50,6 +57,9 @@
     <div class="loan__side">
         <x-status :model="$loan" />
         <span class="strong num">@money($loan->total_amount)</span>
+        @foreach ($loan->tickets ?? [] as $tk)
+            <a href="{{ route('client.tickets.show', $tk) }}" class="small">{{ $tk->title }}</a>
+        @endforeach
         @if (!$compact && $loan->canRequestRenewal())
             <button type="button" class="btn btn--sm" data-dialog-open="renew-{{ $loan->id }}"><x-icon name="calendar" size="sm" /> Prolonger</button>
         @elseif ($compact && $loan->canRequestRenewal())

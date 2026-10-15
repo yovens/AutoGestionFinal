@@ -20,7 +20,7 @@
         <div>
             <h1 class="h1">{{ $user->nom }}</h1>
             <div class="row row--tight" style="margin-top:6px">
-                <x-badge :tone="$user->isAdmin() ? 'brand' : 'off'" class="badge--plain">{{ $user->role_label }}</x-badge>
+                <x-badge :tone="$user->isStaff() ? 'brand' : 'off'" class="badge--plain">{{ $user->role_label }}</x-badge>
                 @if ($user->isBlocked())<x-badge tone="alert">Suspendu</x-badge>@else<x-badge tone="ok">Actif</x-badge>@endif
                 <span class="small muted">Inscrit le {{ $user->created_at?->translatedFormat('j M Y') }}</span>
             </div>
@@ -58,7 +58,7 @@
                     <tbody>
                         @foreach ($user->loans as $loan)
                             <tr>
-                                <td><div class="row row--tight" style="flex-wrap:nowrap"><x-plate :plate="$loan->vehicle?->plate ?? '—'" /><a href="{{ route('admin.loans.show', $loan) }}" class="table__link nowrap">{{ $loan->vehicle?->name ?? 'Véhicule supprimé' }}</a></div></td>
+                                <td><div class="row row--tight" style="flex-wrap:nowrap"><x-plate :plate="$loan->vehicle?->plate ?? '—'" /><a href="{{ route('counter.loans.show', $loan) }}" class="table__link nowrap">{{ $loan->vehicle?->name ?? 'Véhicule supprimé' }}</a></div></td>
                                 <td class="nowrap">{{ $loan->start_date ? $loan->start_date->translatedFormat('j M') . ' au ' . $loan->end_date->translatedFormat('j M Y') : 'Pas commencée' }}</td>
                                 <td><x-status :model="$loan" /></td>
                                 <td class="right num">@money($loan->total_amount)</td>
@@ -100,7 +100,7 @@
                 <x-field name="nom" label="Nom complet" :value="$user->nom" required />
                 <x-field name="email" type="email" label="E-mail" :value="$user->email" required />
                 <x-field name="telephone" type="tel" label="Téléphone" :value="$user->telephone" />
-                <x-field name="role" type="select" label="Rôle" :value="$user->role" :options="['CLIENT' => 'Client', 'ADMIN' => 'Administrateur']" :disabled="$isMe"
+                <x-field name="role" type="select" label="Rôle" :value="$user->role" :options="\App\Models\User::ROLE_LABELS" :disabled="$isMe"
                          :hint="$isMe ? 'Vous ne pouvez pas changer votre propre rôle.' : null" />
                 @if ($isMe)<input type="hidden" name="role" value="{{ $user->role }}">@endif
             </div>

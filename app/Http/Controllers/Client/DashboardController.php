@@ -17,9 +17,9 @@ class DashboardController extends Controller
         $user = $request->user();
 
         // Lokasyon ki toujou ap kouri oswa ki tann repons.
-        $activeLoans = $user->loans()->with('vehicle')
+        $activeLoans = $user->loans()->with('vehicle', 'tickets')
             ->whereIn('status', LoanCart::HOLDING)
-            ->orderByRaw("CASE status WHEN 'expired' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE status WHEN 'ready' THEN 0 WHEN 'expired' THEN 1 WHEN 'approved' THEN 2 ELSE 3 END")
             ->get();
 
         $pendingPurchases = $user->transactions()->with('vehicle')

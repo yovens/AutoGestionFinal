@@ -19,7 +19,7 @@ class LoanController extends Controller
     {
         LoanCart::syncExpired();
 
-        $loans = $request->user()->loans()->with('vehicle')->latest()->get();
+        $loans = $request->user()->loans()->with('vehicle', 'tickets')->latest()->get();
 
         return view('client.loan', compact('loans'));
     }
@@ -33,7 +33,7 @@ class LoanController extends Controller
         $this->fleet->requestLoan($request->user(), $vehicle->id, (int) $data['duration']);
 
         return redirect()->route('client.loan')
-            ->with('success', 'Demande envoyée. L’agence vous confirme la location sous peu.');
+            ->with('success', 'Demande envoyée. Dès que l’agence la confirme, votre code de retrait apparaît ici.');
     }
 
     public function renew(Request $request, $id)
@@ -59,6 +59,8 @@ class LoanController extends Controller
             'pending' => $transactions->where('status', Transaction::PENDING)->sum('amount'),
         ];
 
-        return view('client.transactions', compact('transactions', 'totals'));
+        $tickets = \App\Models\Ticket::with('vehicle')->where('user_id', $request->user()->id)->latest()->get();
+
+        return view('client.transactions', compact('transactions', 'totals', 'tickets'));
     }
 }

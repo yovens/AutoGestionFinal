@@ -17,6 +17,7 @@
     <nav class="tabs" aria-label="Filtrer par rôle">
         <a href="{{ route('admin.users.index', array_filter(['q' => $search])) }}" @if (!$role) aria-current="page" @endif>Tous</a>
         <a href="{{ route('admin.users.index', array_filter(['role' => 'CLIENT', 'q' => $search])) }}" @if ($role === 'CLIENT') aria-current="page" @endif>Clients</a>
+        <a href="{{ route('admin.users.index', array_filter(['role' => 'SECRETAIRE', 'q' => $search])) }}" @if ($role === 'SECRETAIRE') aria-current="page" @endif>Secrétaires</a>
         <a href="{{ route('admin.users.index', array_filter(['role' => 'ADMIN', 'q' => $search])) }}" @if ($role === 'ADMIN') aria-current="page" @endif>Administrateurs</a>
     </nav>
     @if ($role)<input type="hidden" name="role" value="{{ $role }}">@endif
@@ -46,7 +47,7 @@
                                 </div>
                             </td>
                             <td class="nowrap">{{ $u->telephone ?: '—' }}</td>
-                            <td><x-badge :tone="$u->isAdmin() ? 'brand' : 'off'" class="badge--plain">{{ $u->role_label }}</x-badge></td>
+                            <td><x-badge :tone="$u->isStaff() ? 'brand' : 'off'" class="badge--plain">{{ $u->role_label }}</x-badge></td>
                             <td class="right num">{{ $u->loans_count }}</td>
                             <td>
                                 @if ($u->isBlocked())<x-badge tone="alert">Suspendu</x-badge>@else<x-badge tone="ok">Actif</x-badge>@endif
@@ -82,7 +83,7 @@
             </div>
             <div class="form-grid">
                 <x-field name="password" type="password" label="Mot de passe provisoire" autocomplete="new-password" hint="8 caractères minimum" required />
-                <x-field name="role" type="select" label="Rôle" :value="'CLIENT'" :options="['CLIENT' => 'Client', 'ADMIN' => 'Administrateur']" />
+                <x-field name="role" type="select" label="Rôle" :value="'CLIENT'" :options="\App\Models\User::ROLE_LABELS" />
             </div>
         </div>
         <div class="modal__foot">

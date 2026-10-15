@@ -51,8 +51,14 @@
                 </dd>
                 @if ($transaction->loan)
                     <dt>Location liée</dt>
-                    <dd><a href="{{ route('admin.loans.show', $transaction->loan) }}">LOC-{{ str_pad($transaction->loan->id, 5, '0', STR_PAD_LEFT) }}</a></dd>
+                    <dd><a href="{{ route('counter.loans.show', $transaction->loan) }}">{{ $transaction->loan->reference }}</a></dd>
                 @endif
+                @if ($transaction->note)<dt>Motif</dt><dd>{{ $transaction->note }}</dd>@endif
+                <dt>Mode</dt><dd>{{ $transaction->method_label }}</dd>
+                @if ($transaction->recorder)<dt>Encaissé par</dt><dd>{{ $transaction->recorder->nom }}</dd>@endif
+                @foreach ($transaction->tickets as $tk)
+                    <dt>Ticket</dt><dd><a href="{{ route('counter.tickets.show', $tk) }}">{{ $tk->code }}</a></dd>
+                @endforeach
             </dl>
             <p class="tiny muted" style="margin-top:var(--s5)">AutoGestion, Simon, Les Cayes. +509 40 16 03 35.</p>
         </div>
@@ -63,15 +69,11 @@
             <section class="panel">
                 <div class="panel__head"><h2 class="h3">Achat en attente</h2></div>
                 <div class="panel__body stack">
-                    <p class="small muted">Le véhicule est réservé au client. Confirmez quand le paiement est reçu, ou annulez pour le remettre en vente.</p>
-                    <form method="POST" action="{{ route('admin.transactions.confirm', $transaction) }}" data-confirm="Confirmer le paiement de {{ \App\Providers\AppServiceProvider::money($transaction->amount) }} ?">
-                        @csrf<button type="submit" class="btn btn--ok btn--block"><x-icon name="check" size="sm" /> Paiement reçu</button>
-                    </form>
-                    <form method="POST" action="{{ route('admin.transactions.cancel', $transaction) }}" data-confirm="Annuler cet achat ? Le véhicule sera remis en vente.">
-                        @csrf<button type="submit" class="btn btn--danger btn--block">Annuler l’achat</button>
-                    </form>
+                    <p class="small muted">Le véhicule est réservé au client. Encaissez quand le paiement est reçu : le bon de remise s’imprime ensuite.</p>
+                    <button type="button" class="btn btn--ok btn--block" data-dialog-open="sale-{{ $transaction->id }}"><x-icon name="check" size="sm" /> Encaisser</button>
                 </div>
             </section>
+            @include('counter.partials.sale-dialog', ['t' => $transaction])
         @endif
         <section class="panel">
             <div class="panel__body">

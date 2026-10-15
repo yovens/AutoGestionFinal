@@ -25,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.admin', function ($view) {
             $view->with('nav', [
                 'loans'    => LoanCart::whereIn('status', [LoanCart::PENDING, LoanCart::PENDING_RENEWAL])->count(),
+                'counter'  => LoanCart::where('status', LoanCart::READY)->count()
+                              + LoanCart::where('status', LoanCart::EXPIRED)->count(),
                 'payments' => Transaction::where('status', Transaction::PENDING)->count(),
                 'messages' => Contact::where('is_read', false)->count(),
             ]);

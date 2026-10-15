@@ -48,7 +48,7 @@
                     <tbody>
                         @foreach ($vehicle->loans as $loan)
                             <tr>
-                                <td><a href="{{ route('admin.loans.show', $loan) }}" class="table__link">{{ $loan->user?->nom ?? 'Compte supprimé' }}</a></td>
+                                <td><a href="{{ route('counter.loans.show', $loan) }}" class="table__link">{{ $loan->user?->nom ?? 'Compte supprimé' }}</a></td>
                                 <td class="nowrap">{{ $loan->start_date ? $loan->start_date->translatedFormat('j M') . ' au ' . $loan->end_date->translatedFormat('j M Y') : '—' }}</td>
                                 <td><x-status :model="$loan" /></td>
                                 <td class="right num">@money($loan->total_amount)</td>

@@ -71,40 +71,53 @@ class DemoSeeder extends Seeder
 
         $v = fn ($plate) => Vehicle::where('plate', $plate)->value('id');
 
+        $admin = User::where('role', User::ADMIN)->first();
+        $desk = User::firstOrCreate(['email' => 'secretaire@autogestion.ht'], [
+            'nom' => 'Mirlande Joseph', 'telephone' => '+509 36 22 18 40',
+            'password' => Hash::make('password'), 'role' => User::SECRETARY, 'status' => User::ACTIVE,
+        ]);
+
+        // Sik konplè: demann → konfime → kle remèt (peman + bon de sortie)
+        $out = function (User $client, string $plate, int $days, int $daysAgo, int $km) use ($fleet, $desk, $v) {
+            $loan = $fleet->approveLoan($fleet->requestLoan($client, $v($plate), $days));
+            $fleet->checkout($loan, $desk, ['km_out' => $km, 'fuel_out' => 4, 'condition_out' => 'RAS', 'id_document' => null, 'deposit' => 200, 'method' => 'cash']);
+            $this->backdate($loan->fresh(), $daysAgo);
+
+            return $loan->fresh();
+        };
+
         // Lokasyon an kou
-        $l1 = $fleet->createApprovedLoan($clients[0]->id, $v('AA-21457'), 7);
-        $this->backdate($l1, 5);
+        $out($clients[0], 'AA-21457', 7, 5, 48210);
 
         // Lokasyon an reta
-        $l2 = $fleet->createApprovedLoan($clients[1]->id, $v('AE-45021'), 4);
-        $this->backdate($l2, 6);
+        $out($clients[1], 'AE-45021', 4, 6, 31500);
 
-        // Demann k ap tann
+        // Demann k ap tann konfimasyon
         $fleet->requestLoan($clients[2], $v('AB-30982'), 3);
-        $fleet->requestLoan($clients[0], $v('AL-56789'), 2);
+
+        // Konfime: kliyan an dwe vin pran kle yo ak kòd li
+        $fleet->approveLoan($fleet->requestLoan($clients[0], $v('AL-56789'), 2));
 
         // Prolongasyon mande
-        $l3 = $fleet->createApprovedLoan($clients[3]->id, $v('AD-77310'), 5);
-        $this->backdate($l3, 3);
-        $fleet->requestRenewal($l3->fresh(), 3);
+        $l3 = $out($clients[3], 'AD-77310', 5, 3, 62044);
+        $fleet->requestRenewal($l3, 3);
 
         // Lokasyon fini (retounen)
-        $l4 = $fleet->createApprovedLoan($clients[4]->id, $v('AF-62290'), 3);
-        $this->backdate($l4, 40);
-        $fleet->returnLoan($l4->fresh());
+        $l4 = $out($clients[4], 'AF-62290', 3, 40, 15800);
+        $fleet->checkin($l4, $desk, ['km_in' => 16240, 'fuel_in' => 3, 'condition_in' => 'RAS', 'late_fee' => 0, 'extra_fee' => 0, 'extra_reason' => null, 'deposit_returned' => true, 'method' => null]);
 
         // Acha
         $t1 = $fleet->requestPurchase($clients[4], $v('AC-11804'));
-        $fleet->confirmSale($t1);
-        $t1->forceFill(['created_at' => now()->subMonths(2)])->save();
+        $fleet->confirmSale($t1, $desk, 'transfer');
+        $t1->forceFill(['created_at' => now()->subMonths(2), 'updated_at' => now()->subMonths(2)])->save();
         $fleet->requestPurchase($clients[2], $v('AJ-33107'));
 
         // Kèk peman nan mwa pase yo pou grafik la
         foreach ([5 => 14800, 4 => 9200, 3 => 21500, 1 => 12600] as $months => $amount) {
             Transaction::create([
                 'user_id' => $clients[$months % 5]->id, 'vehicle_id' => $v('AA-21457'),
-                'amount' => $amount, 'type' => Transaction::RENTAL, 'status' => Transaction::COMPLETED,
-            ])->forceFill(['created_at' => now()->subMonths($months)->setDay(12)])->save();
+                'amount' => $amount, 'type' => Transaction::RENTAL, 'status' => Transaction::COMPLETED, 'method' => 'cash',
+            ])->forceFill(['created_at' => now()->subMonths($months)->setDay(12), 'updated_at' => now()->subMonths($months)->setDay(12)])->save();
         }
 
         Contact::create(['user_id' => $clients[1]->id, 'subject' => 'Retour du véhicule', 'message' => "Bonjour, je serai en retard de deux jours pour rendre la Classe C. Est-ce possible de prolonger sur place à l'agence ?"]);
@@ -115,7 +128,9 @@ class DemoSeeder extends Seeder
     {
         $start = Carbon::today()->subDays($daysAgo);
         $loan->update(['start_date' => $start, 'end_date' => $start->copy()->addDays($loan->duration_days)]);
-        $loan->transactions()->update(['created_at' => $start]);
+        $loan->transactions()->update(['created_at' => $start, 'updated_at' => $start]);
+        $loan->tickets()->update(['created_at' => $start, 'updated_at' => $start]);
+        $loan->forceFill(['picked_up_at' => $start->copy()->setTime(9, 30)]);
         $loan->forceFill(['created_at' => $start])->save();
     }
 }

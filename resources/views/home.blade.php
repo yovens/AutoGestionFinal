@@ -95,25 +95,116 @@
         </div>
     </section>
 
-    <section class="section section--line" id="fonctionnement">
+    @php
+        $demo = $vehicles->first();
+        $demoDays = 3;
+    @endphp
+    {{-- Parcours: yon ti machin desann wout la pandan moun nan ap defile, li pase sou chak etap epi li pake devan ajans lan. --}}
+    <section class="section section--line journey" id="fonctionnement" data-journey>
         <div class="container">
-            <div class="section__head">
-                <h2 class="h1">Comment ça marche</h2>
+            <div class="journey__head">
+                <h2 class="h1">De l’écran aux clés, en quatre étapes</h2>
+                <p class="lead" style="margin-top:var(--s3)">Suivez la route : c’est exactement le chemin de votre location.</p>
             </div>
-            <ol class="steps" style="list-style:none;margin:0;padding:0">
-                <li class="step">
-                    <h3 class="h3">Choisissez votre véhicule</h3>
-                    <p>Comparez les prix de location à la journée et les prix de vente, photos et plaques à l’appui.</p>
-                </li>
-                <li class="step">
-                    <h3 class="h3">Réservez en ligne</h3>
-                    <p>Indiquez la durée de location ou réservez l’achat. Le véhicule est bloqué à votre nom.</p>
-                </li>
-                <li class="step">
-                    <h3 class="h3">Passez à l’agence</h3>
-                    <p>Une fois la demande confirmée, réglez sur place et repartez avec les clés.</p>
-                </li>
-            </ol>
+
+            <div class="journey__track" data-journey-track>
+                <svg class="journey__road" aria-hidden="true" focusable="false">
+                    <path class="journey__asphalt" />
+                    <path class="journey__lane" />
+                    <path class="journey__done" />
+                </svg>
+
+                <div class="journey__car" aria-hidden="true" data-journey-car>
+                    <svg viewBox="0 0 44 76" width="44" height="76">
+                        <rect x="1" y="12" width="5" height="14" rx="2" class="car-wheel" />
+                        <rect x="38" y="12" width="5" height="14" rx="2" class="car-wheel" />
+                        <rect x="1" y="50" width="5" height="14" rx="2" class="car-wheel" />
+                        <rect x="38" y="50" width="5" height="14" rx="2" class="car-wheel" />
+                        <rect x="4" y="2" width="36" height="72" rx="12" class="car-body" />
+                        <rect x="9" y="10" width="26" height="9" rx="3" class="car-glass" />
+                        <rect x="9" y="22" width="26" height="26" rx="5" class="car-roof" />
+                        <path d="M9 52h26l-3 9H12z" class="car-glass" />
+                        <rect x="8" y="3" width="7" height="3" rx="1.5" class="car-tail" />
+                        <rect x="29" y="3" width="7" height="3" rx="1.5" class="car-tail" />
+                        <rect x="8" y="69" width="8" height="3.5" rx="1.5" class="car-light" />
+                        <rect x="28" y="69" width="8" height="3.5" rx="1.5" class="car-light" />
+                    </svg>
+                </div>
+
+                <ol class="journey__steps">
+                    <li class="jstep" data-journey-step>
+                        <span class="jstep__node" data-journey-node>1</span>
+                        <div class="jstep__card">
+                            <h3 class="h2">Choisissez votre véhicule</h3>
+                            <p>Location à la journée ou achat : les prix sont affichés, photos et plaques à l’appui.</p>
+                            @if ($demo)
+                                <div class="jstep__demo jstep__demo--car">
+                                    @if ($demo->image_url)<img src="{{ $demo->image_url }}" alt="" loading="lazy">@endif
+                                    <div>
+                                        <x-plate :plate="$demo->plate" />
+                                        <div class="strong" style="margin-top:6px">{{ $demo->name }}</div>
+                                        <div class="small muted num">@money($demo->loan_price) / jour, @money($demo->price) à l’achat</div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </li>
+
+                    <li class="jstep" data-journey-step>
+                        <span class="jstep__node" data-journey-node>2</span>
+                        <div class="jstep__card">
+                            <h3 class="h2">Réservez en ligne</h3>
+                            <p>Indiquez le nombre de jours ou réservez l’achat. Le véhicule est aussitôt bloqué à votre nom.</p>
+                            @if ($demo)
+                                <div class="jstep__demo">
+                                    <div class="row row--between">
+                                        <span class="muted small">Durée</span>
+                                        <span class="jstep__days"><span>−</span><strong class="num">{{ $demoDays }}</strong><span>+</span></span>
+                                    </div>
+                                    <div class="total-line" style="margin-top:var(--s3);padding-bottom:0">
+                                        <span class="muted">Total pour {{ $demoDays }} jours</span>
+                                        <span class="total-line__value num">@money($demo->loan_price * $demoDays)</span>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </li>
+
+                    <li class="jstep" data-journey-step>
+                        <span class="jstep__node" data-journey-node>3</span>
+                        <div class="jstep__card">
+                            <h3 class="h2">L’agence confirme</h3>
+                            <p>L’équipe valide votre demande et vous recevez un code de retrait dans votre espace.</p>
+                            <div class="jstep__demo">
+                                <div class="row row--between">
+                                    <span class="strong">{{ $demo?->name ?? 'Votre véhicule' }}</span>
+                                    <x-badge tone="ok">En cours</x-badge>
+                                </div>
+                                <div class="timeline">
+                                    <div class="timeline__bar"><div class="timeline__fill" style="width:35%"></div></div>
+                                    <div class="timeline__ends"><span>Départ aujourd’hui</span><span>Retour dans {{ $demoDays }} jours</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <li class="jstep jstep--last" data-journey-step>
+                        <span class="jstep__node jstep__node--park" data-journey-node>P</span>
+                        <div class="jstep__card">
+                            <h3 class="h2">Récupérez les clés à Simon</h3>
+                            <p>Présentez votre code de retrait au comptoir, réglez sur place et repartez avec les clés et votre bon de sortie.</p>
+                            <div class="jstep__demo jstep__demo--ticket">
+                                <span class="pickup-code"><small>Code de retrait</small>K7P-29Q</span>
+                                <x-icon name="key" size="lg" />
+                            </div>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="journey__cta">
+                <a href="{{ $cta }}" class="btn btn--primary btn--lg">{{ auth()->check() ? 'Choisir mon véhicule' : 'Créer mon compte et réserver' }}</a>
+            </div>
         </div>
     </section>
 

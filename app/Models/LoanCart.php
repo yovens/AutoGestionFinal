@@ -8,42 +8,64 @@ use Illuminate\Database\Eloquent\Model;
 class LoanCart extends Model
 {
     public const PENDING         = 'pending';
-    public const APPROVED        = 'approved';
+    public const READY           = 'ready';      // konfime, kliyan an poko vin pran kle yo
+    public const APPROVED        = 'approved';   // kliyan an gen machin nan (an kou)
     public const REJECTED        = 'rejected';
     public const EXPIRED         = 'expired';
     public const PENDING_RENEWAL = 'pending_renewal';
     public const RETURNED        = 'returned';
+    public const CANCELLED       = 'cancelled';  // konfime men kliyan an pa janm vin
 
     /** Estati kote machin nan toujou soti nan stock la (kliyan an genyen l oswa li rezève). */
-    public const HOLDING = [self::PENDING, self::APPROVED, self::EXPIRED, self::PENDING_RENEWAL];
+    public const HOLDING = [self::PENDING, self::READY, self::APPROVED, self::EXPIRED, self::PENDING_RENEWAL];
+
+    /** Estati kote kliyan an gen machin nan nan men l. */
+    public const OUT = [self::APPROVED, self::EXPIRED, self::PENDING_RENEWAL];
+
+    /** Nivo kabiran (an ka). */
+    public const FUEL = [0 => 'Vide', 1 => '1/4', 2 => '1/2', 3 => '3/4', 4 => 'Plein'];
 
     public const LABELS = [
         self::PENDING         => 'En attente',
+        self::READY           => 'À récupérer',
         self::APPROVED        => 'En cours',
         self::REJECTED        => 'Refusée',
         self::EXPIRED         => 'Délai dépassé',
         self::PENDING_RENEWAL => 'Prolongation demandée',
         self::RETURNED        => 'Rendue',
+        self::CANCELLED       => 'Annulée',
     ];
 
     public const TONES = [
         self::PENDING         => 'wait',
+        self::READY           => 'brand',
         self::APPROVED        => 'ok',
         self::REJECTED        => 'off',
         self::EXPIRED         => 'alert',
         self::PENDING_RENEWAL => 'wait',
         self::RETURNED        => 'off',
+        self::CANCELLED       => 'off',
     ];
 
     protected $fillable = [
         'vehicle_id', 'user_id', 'duration_days', 'total_amount', 'status',
         'start_date', 'end_date', 'renewal_requested_days', 'returned_at',
+        'pickup_code', 'picked_up_at', 'checkout_by', 'checkin_by', 'id_document',
+        'km_out', 'km_in', 'fuel_out', 'fuel_in', 'condition_out', 'condition_in',
+        'deposit', 'deposit_returned',
     ];
 
     protected $casts = [
         'start_date'             => 'date',
         'end_date'               => 'date',
         'returned_at'            => 'datetime',
+        'picked_up_at'           => 'datetime',
+        'km_out'                 => 'integer',
+        'km_in'                  => 'integer',
+        'fuel_out'               => 'integer',
+        'fuel_in'                => 'integer',
+        'deposit'                => 'integer',
+        'deposit_returned'       => 'boolean',
         'duration_days'          => 'integer',
         'total_amount'           => 'integer',
         'renewal_requested_days' => 'integer',
@@ -62,6 +84,66 @@ class LoanCart extends Model
     public function transactions()
     {
         return $this->hasMany(Transaction::class, 'loan_cart_id');
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class, 'loan_cart_id');
+    }
+
+    public function checkoutAgent()
+    {
+        return $this->belongsTo(User::class, 'checkout_by');
+    }
+
+    public function checkinAgent()
+    {
+        return $this->belongsTo(User::class, 'checkin_by');
+    }
+
+    /** Kòd retrè kliyan an montre nan ajans lan (eg. K7P-29Q). San lèt ki ka konfonn (0/O, 1/I). */
+    public static function newPickupCode(): string
+    {
+        $alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        do {
+            $raw = '';
+            for ($i = 0; $i < 6; $i++) {
+                $raw .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            $code = substr($raw, 0, 3) . '-' . substr($raw, 3);
+        } while (static::where('pickup_code', $code)->exists());
+
+        return $code;
+    }
+
+    /** Netwaye sa sekretè a tape (espas, tire, miniskil) pou konpare ak kòd la. */
+    public static function normalizeCode(?string $input): string
+    {
+        $clean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $input));
+
+        return strlen($clean) === 6 ? substr($clean, 0, 3) . '-' . substr($clean, 3) : $clean;
+    }
+
+    public static function fuelLabel(?int $level): string
+    {
+        return $level === null ? '—' : (self::FUEL[$level] ?? '—');
+    }
+
+    /** Montan ki poko peye sou lokasyon sa (prolongasyon ki pa ankese). */
+    public function outstanding(): int
+    {
+        return (int) $this->transactions()->where('status', Transaction::PENDING)->sum('amount');
+    }
+
+    /** Frè reta sijere: kantite jou reta × pri pa jou. */
+    public function suggestedLateFee(): int
+    {
+        return $this->daysLate() * (int) ($this->vehicle?->loan_price ?? 0);
+    }
+
+    public function getReferenceAttribute(): string
+    {
+        return 'LOC-' . str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
     }
 
     /**
