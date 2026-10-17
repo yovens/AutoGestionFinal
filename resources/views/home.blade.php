@@ -7,7 +7,7 @@
 @endphp
 
 @section('body')
-<header class="site-head" id="site-head">
+<header class="site-head site-head--overlay" id="site-head" data-home-head>
     <div class="container site-head__in">
         <a href="{{ route('home') }}" class="logo">@include('layouts.partials.logo')</a>
         <nav class="site-nav site-nav--main" aria-label="Navigation">
@@ -30,67 +30,97 @@
 </header>
 
 <main id="main">
-    <section class="hero">
-        <div class="container hero__grid">
-            <div>
-                <h1 class="display">Location et vente de véhicules à {{ \Illuminate\Support\Str::before($agency['city'], ',') }}.</h1>
-                <p class="lead" style="margin-top: var(--s5)">
-                    Choisissez un véhicule en ligne, réservez-le en deux minutes et récupérez les clés à notre agence de {{ $agency['city'] }}.
-                    Le prix affiché est le prix payé.
-                </p>
-                <div class="hero__actions">
-                    <a href="#parc" class="btn btn--primary btn--lg">Voir les véhicules disponibles</a>
-                    @guest
-                        <a href="{{ route('register') }}" class="btn btn--lg">Créer un compte</a>
-                    @endguest
-                </div>
-                <dl class="hero__facts">
-                    <div><dt>Véhicules au parc</dt><dd class="num">{{ $stats['models'] }}</dd></div>
-                    <div><dt>Marques</dt><dd class="num">{{ $stats['brands'] }}</dd></div>
-                    @if ($stats['fromDay'])
-                        <div><dt>Location dès</dt><dd class="num">@money($stats['fromDay']) <span class="small muted">/ jour</span></dd></div>
-                    @endif
-                </dl>
+    @php
+        $featured = $vehicles->first();
+        $heroImg = $featured?->image_url ?: asset('images/istockphoto-2198462919-612x612.jpg');
+        $bandImg = $vehicles->get(4)?->image_url ?: $vehicles->last()?->image_url ?: asset('images/istockphoto-1412904420-612x612.jpg');
+        $town = \Illuminate\Support\Str::before($agency['city'], ',');
+        $carHref = fn ($v) => auth()->check() ? route('client.vehicle.show', $v) : route('login');
+    @endphp
+
+    {{-- 1. HERO: foto machin nan parèt atravè yon plak; li grandi jiskaske l ranpli ekran an pandan scroll la --}}
+    <section class="hx" id="top" data-hero>
+        <div class="hx__stage" data-hero-stage>
+            <div class="hx__frame" data-hero-frame aria-hidden="true">
+                <img src="{{ $heroImg }}" alt="" class="hx__img" data-hero-img fetchpriority="high">
+                <div class="hx__shade" data-hero-shade></div>
             </div>
 
-            @php $featured = $vehicles->first(); @endphp
-            <div class="hero__media">
-                <div class="hero__photo">
-                    @if ($featured?->image_url)
-                        <img src="{{ $featured->image_url }}" alt="{{ $featured->name }}">
-                    @else
-                        <img src="{{ asset('images/istockphoto-2198462919-612x612.jpg') }}" alt="Véhicule tout-terrain sur une route de montagne">
-                    @endif
-                </div>
-                @if ($featured)
-                    <div class="hero__tag">
-                        <x-plate :plate="$featured->plate" />
-                        <span class="strong">{{ $featured->name }}</span>
-                        <span class="small muted num">@money($featured->loan_price) par jour, disponible aujourd’hui</span>
+            <h1 class="hx__title" data-hero-title>
+                <span class="hx__line">Les clés vous</span>
+                <span class="hx__line">attendent à {{ $town }}.</span>
+            </h1>
+
+            <div class="hx__window" data-hero-window>
+                <img src="{{ $heroImg }}" alt="{{ $featured?->name ?? 'Véhicule de l’agence' }}">
+                <span class="hx__band" aria-hidden="true">HT</span>
+            </div>
+
+            @if ($featured)
+                <p class="hx__caption" data-hero-caption>
+                    <x-plate :plate="$featured->plate" />
+                    <span>{{ $featured->name }}, @money($featured->loan_price) par jour</span>
+                </p>
+            @endif
+
+            <div class="hx__hint" data-hero-hint aria-hidden="true"><span></span>Faites défiler</div>
+
+            <div class="hx__end" data-hero-end>
+                <div class="container">
+                    <p class="hx__lead">Location à la journée et vente de véhicules. Réservez en ligne en deux minutes, récupérez les clés à l’agence. Le prix affiché est le prix payé.</p>
+                    <div class="hero__actions">
+                        <a href="#parc" class="btn btn--primary btn--lg">Voir les véhicules</a>
+                        @guest<a href="{{ route('register') }}" class="btn btn--lg hx__btn-light">Créer un compte</a>@endguest
                     </div>
-                @endif
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="section section--line" id="parc">
-        <div class="container">
-            <div class="section__head">
+    {{-- 2. PAK LA: kat yo defile an orizontal pandan w ap desann --}}
+    <section class="fleet" id="parc" data-fleet>
+        <div class="fleet__pin" data-fleet-pin>
+            <div class="container fleet__head">
                 <div>
-                    <h2 class="h1">Disponibles en ce moment</h2>
-                    <p class="muted" style="margin-top:6px">Ces véhicules peuvent partir dès aujourd’hui.</p>
+                    <h2 class="display fleet__title" data-reveal>Le parc, en ce moment</h2>
+                    <p class="lead" style="margin-top:var(--s3)">{{ $stats['models'] }} véhicules, {{ $stats['brands'] }} marques. Ceux-ci peuvent partir aujourd’hui.</p>
                 </div>
                 <a href="{{ $cta }}" class="btn">Voir tout le parc</a>
             </div>
 
             @if ($vehicles->isEmpty())
-                <div class="panel"><x-empty icon="car" title="Le parc se remplit" text="Aucun véhicule n’est disponible pour l’instant. Repassez bientôt ou appelez l’agence." /></div>
+                <div class="container"><div class="panel"><x-empty icon="car" title="Le parc se remplit" text="Aucun véhicule n’est disponible pour l’instant. Repassez bientôt ou appelez l’agence." /></div></div>
             @else
-                <div class="car-grid">
-                    @foreach ($vehicles as $vehicle)
-                        <x-vehicle-card :vehicle="$vehicle" :href="auth()->check() ? route('client.vehicle.show', $vehicle) : route('login')" />
-                    @endforeach
+                <div class="fleet__viewport" data-fleet-viewport>
+                    <ul class="fleet__track" data-fleet-track>
+                        @foreach ($vehicles as $v)
+                            <li class="fcard">
+                                <a href="{{ $carHref($v) }}" class="fcard__link">
+                                    <div class="fcard__media">@if ($v->image_url)<img src="{{ $v->image_url }}" alt="{{ $v->name }}" loading="lazy" data-fleet-img>@endif</div>
+                                    <div class="fcard__body">
+                                        <div class="fcard__top">
+                                            <span class="muted small">{{ $v->brand }}, {{ $v->year }}</span>
+                                            <x-plate :plate="$v->plate" />
+                                        </div>
+                                        <h3 class="fcard__name">{{ $v->model }}</h3>
+                                        <div class="fcard__prices">
+                                            <span><small>Location</small><strong class="num">@money($v->loan_price)</strong><small>/ jour</small></span>
+                                            <span><small>Achat</small><strong class="num">@money($v->price)</strong></span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                        @endforeach
+                        <li class="fcard fcard--more">
+                            <a href="{{ $cta }}" class="fcard__link">
+                                <span class="fcard__more-n num">{{ $stats['models'] }}</span>
+                                <span class="fcard__more-t">véhicules au total. Comparez-les tous dans votre espace.</span>
+                                <span class="btn btn--primary">Voir tout le parc</span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
+                <div class="container"><div class="fleet__progress" aria-hidden="true"><i data-fleet-bar></i></div></div>
             @endif
         </div>
     </section>
@@ -103,7 +133,7 @@
     <section class="section section--line journey" id="fonctionnement" data-journey>
         <div class="container">
             <div class="journey__head">
-                <h2 class="h1">De l’écran aux clés, en quatre étapes</h2>
+                <h2 class="h1" data-reveal>De l’écran aux clés, en quatre étapes</h2>
                 <p class="lead" style="margin-top:var(--s3)">Suivez la route : c’est exactement le chemin de votre location.</p>
             </div>
 
@@ -208,10 +238,25 @@
         </div>
     </section>
 
+    {{-- 4. CHIF YO: foto parallax dèyè, chif ki konte --}}
+    <section class="band" data-band>
+        <div class="band__bg" aria-hidden="true"><img src="{{ $bandImg }}" alt="" loading="lazy" data-band-img></div>
+        <div class="container band__in">
+            <dl class="band__stats">
+                <div><dt>véhicules au parc</dt><dd class="num" data-count="{{ $stats['models'] }}">{{ $stats['models'] }}</dd></div>
+                <div><dt>marques</dt><dd class="num" data-count="{{ $stats['brands'] }}">{{ $stats['brands'] }}</dd></div>
+                @if ($stats['fromDay'])
+                    <div><dt>par jour, pour commencer</dt><dd class="num" data-count="{{ $stats['fromDay'] }}" data-suffix="&nbsp;$">{{ $stats['fromDay'] }}&nbsp;$</dd></div>
+                @endif
+                <div><dt>pour réserver en ligne</dt><dd class="num">24 h/24</dd></div>
+            </dl>
+        </div>
+    </section>
+
     <section class="section section--line" id="agence">
         <div class="container agency">
             <div>
-                <h2 class="h1">L’agence</h2>
+                <h2 class="h1" data-reveal>L’agence</h2>
                 <p class="lead" style="margin-top:var(--s3)">Une équipe sur place pour la remise des clés, les retours et les paiements.</p>
                 <dl class="agency__list">
                     <div><x-icon name="pin" /><dt>Adresse</dt><dd>{{ $agency['address'] }}</dd></div>
@@ -226,6 +271,17 @@
             </div>
         </div>
     </section>
+
+    {{-- 5. DÈNYE APÈL --}}
+    <section class="outro">
+        <div class="container outro__in">
+            <h2 class="display outro__title" data-reveal>Prêt à prendre la route ?</h2>
+            <div class="hero__actions" style="justify-content:center">
+                <a href="{{ $cta }}" class="btn btn--primary btn--lg">{{ auth()->check() ? 'Choisir mon véhicule' : 'Créer mon compte' }}</a>
+                <a href="{{ \App\Support\Agency::telHref() }}" class="btn btn--lg hx__btn-light">Appeler l’agence</a>
+            </div>
+        </div>
+    </section>
 </main>
 
 <footer class="site-foot">
@@ -234,4 +290,11 @@
         <span><a href="{{ route('login') }}">Espace client</a></span>
     </div>
 </footer>
+@push('scripts')
+    <script src="{{ asset('vendor/gsap/gsap.min.js') }}" defer></script>
+    <script src="{{ asset('vendor/gsap/ScrollTrigger.min.js') }}" defer></script>
+    <script src="{{ asset('vendor/gsap/SplitText.min.js') }}" defer></script>
+    <script src="{{ asset('vendor/lenis/lenis.js') }}" defer></script>
+    <script src="{{ asset('js/home.js') }}?v={{ filemtime(public_path('js/home.js')) }}" defer></script>
+@endpush
 @endsection

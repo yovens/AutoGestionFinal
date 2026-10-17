@@ -8,7 +8,7 @@ class HomeController extends Controller
 {
     public function __invoke()
     {
-        $vehicles = Vehicle::available()->latest()->take(6)->get();
+        $vehicles = Vehicle::available()->latest()->take(8)->get();
 
         $stats = [
             'models'   => Vehicle::count(),
